@@ -1,7 +1,7 @@
 // default file that expo will grab for the import in map.tsx
 // if you are using Expo Go/are on mobile
-import React, {useEffect,useMemo, useState } from 'react';
-import MapView, {Marker, Polyline, Callout} from 'react-native-maps';
+import React, { useEffect,useMemo, useState } from 'react';
+import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { currentUser, friends, UserLocation } from '@/data/mockLocations';
@@ -24,6 +24,8 @@ export default function MapComponent() {
   const [searchResults, setSearchResults] = useState<FriendSearchUser[]>([]);
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   // replace this with your real logged-in user id later if needed
  const currentUserId = Number(currentUser.id ?? 1);
@@ -129,6 +131,43 @@ export default function MapComponent() {
     setSearchResults([]);
     setIsSearching(false);
   }
+
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+
+    async function setupLocation() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        setPermissionGranted(false);
+        return;
+      }
+
+      setPermissionGranted(true);
+
+      const currentLocation = await Location.getCurrentPositionAsync();
+      setUserLocation(currentLocation);
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000, // in ms
+          distanceInterval: 10, // in meters
+        },
+        (updatedLocation) => {
+          setUserLocation(updatedLocation);
+        }
+      );
+    }
+
+    setupLocation();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
