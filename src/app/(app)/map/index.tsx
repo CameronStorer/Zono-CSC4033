@@ -200,10 +200,9 @@ export default function MapComponent() {
         activeOpacity={0.8}
       >
         <Image
-          source={require('../../assets/images/default-avatar.png')}
+          source={require('../../../../assets/images/default-avatar.png')}
           style={styles.profileAvatar}
         />
-         {/* later this should be changed into picture, this is the default */}
 
       </TouchableOpacity>
 
