@@ -1,12 +1,12 @@
 // db-service.ts
-import { supabase } from '@/app/(app)/database/supabase';
+import { supabase } from '@/components/supabase';
 
 // basic configuration to specify which attributes to display in the admin panel
 export const DATABASE_CONFIG = {
   users: {
     label: 'App Users',
     table: 'users',
-    showColumns: ['id', 'username', 'email', 'phone_number', 'created_at', 'last_online', 'bio', 'status',] as const,
+    showColumns: ['id', 'username', 'full_name', 'email', 'phone_number', 'created_at', 'last_online', 'bio', 'status',] as const,
     widths: { 
       id: 80, 
       username: 140, 

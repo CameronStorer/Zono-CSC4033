@@ -5,9 +5,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
-import { DATABASE_CONFIG, fetchTableData, deleteRow, upsertRow } from '@/app/(app)/database/logic';
-import { styles } from '@/app/(app)/database/style'; // Use your external styles
-import { supabase } from '@/app/(app)/database/supabase';
+import { DATABASE_CONFIG, fetchTableData, deleteRow, upsertRow } from '@/app/(app)/admin-panel/_logic';
+import { styles } from '@/app/(app)/admin-panel/_style'; // Use your external styles
+import { supabase } from '@/components/supabase';
 
 // admin panel page
 export default function AdminPanel() {
@@ -19,10 +19,16 @@ export default function AdminPanel() {
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ username: '', email: '', phone_number: '', full_name: ''});
-
   const config = DATABASE_CONFIG.users;
   const screenWidth = Dimensions.get("window").width;
+
+
+  const [formData, setFormData] = useState({
+    username: '', email: '', phone_number: '', 
+    full_name: '', password: '', confirmPassword: ''
+  });
+
+
 
   // initial loading of table data
   const loadData = async () => {
@@ -92,67 +98,89 @@ export default function AdminPanel() {
   }, [data, searchQuery]);
 
   // simple user input func for creating new user
+// At the top of your component, add password to formData:
   const handleSave = async () => {
-    const { username, email, phone_number, full_name } = formData;
+    const { username, email, phone_number, full_name, password, confirmPassword } = formData;
 
-    // 1. FRONTEND PRE-FLIGHT VALIDATION (UX Layer)
-    const unRegex = /^[a-zA-Z0-9_]+$/;
+    // ── Validation ─────────────────────────────────────────
+    const unRegex    = /^[a-zA-Z0-9_]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\+?[0-9]{10,15}$/;
-    const nameRegex = /^[a-zA-Z\s]+$/;
+    const phoneRegex = /^\+?[0-9]{7,15}$/;
+    const nameRegex  = /^[a-zA-ZÀ-ÿ' \-\.]+$/;
 
     if (!username || !email) {
-      return Alert.alert("Required", "Username, and Email are mandatory.");
+      return Alert.alert("Required", "Username and email are mandatory.");
     }
-
     if (!unRegex.test(username)) {
-      return Alert.alert("Validation Error", "Username must be alphanumeric (underscores allowed) with no spaces.");
+      return Alert.alert("Validation Error", "Username must be alphanumeric (underscores allowed).");
     }
-
     if (!emailRegex.test(email)) {
       return Alert.alert("Validation Error", "Please enter a valid email address.");
     }
-
     if (phone_number && !phoneRegex.test(phone_number)) {
-      return Alert.alert("Validation Error", "Phone number must be 10-15 digits.");
+      return Alert.alert("Validation Error", "Phone number must be 7–15 digits.");
+    }
+    if (full_name && !nameRegex.test(full_name)) {
+      return Alert.alert("Validation Error", "Name can only contain letters, spaces, hyphens.");
     }
 
-    if (full_name && !nameRegex.test(full_name)) {
-      return Alert.alert("Validation Error", "Name can only contain letters and spaces.");
+    // Password validation only on new user creation
+    if (!editingId) {
+      if (!password) {
+        return Alert.alert("Required", "Password is required.");
+      }
+      if (password.length < 6) {
+        return Alert.alert("Validation Error", "Password must be at least 6 characters.");
+      }
+      if (password !== confirmPassword) {
+        return Alert.alert("Validation Error", "Passwords do not match.");
+      }
     }
 
     setLoading(true);
 
     try {
-      // 2. DATABASE EXECUTION (Security Layer)
-      const action = editingId 
-        ? supabase.from(config.table).update(formData).eq('id', editingId)
-        : supabase.from(config.table).insert([formData]);
+      if (editingId) {
+        // UPDATE: standard table update (no auth changes)
+        const { error } = await supabase
+          .from(config.table)
+          .update({ username, email, phone_number, full_name })
+          .eq('id', editingId);
+        if (error) throw error;
 
-      const { error } = await action;
+      } else {
+        // INSERT: create auth user — trigger creates public.users row
+        const { data, error: authError } = await supabase.auth.signUp({
+          email,
+          password,   // ← user's actual password now
+          options: {
+            data: {
+              full_name,
+              username,
+            },
+          },
+        });
 
-      if (error) {
-        // Postgres error 23514 is a Check Constraint violation
-        if (error.code === '23514') {
+        if (authError) throw authError;
+
+        // If session is null here, email confirmation is still ON
+        // Check your Supabase dashboard or config.toml
+        if (!data.session) {
           Alert.alert(
-            "Database Rejected", 
-            "The data format is invalid according to system rules. Please double-check all fields."
+            "Check your email",
+            "A confirmation link was sent. Disable email confirmation in Supabase if you don't want this."
           );
-        } else {
-          Alert.alert("Database Error", error.message);
         }
-        return; 
       }
 
-      // 3. SUCCESS & UI RESET
       setModalVisible(false);
       setEditingId(null);
-      setFormData({ username: '', email: '', phone_number: '', full_name: '' });
-      loadData();
-      
-    } catch (e: any) {
-      console.error(e);
-      Alert.alert("System Error", "An unexpected error occurred.");
+      setFormData({ username: '', email: '', phone_number: '', full_name: '', password: '', confirmPassword: '' });
+      setTimeout(() => loadData(), 500);
+
+    } catch (e) {
+      const error = e as Error;
+      Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -206,7 +234,7 @@ export default function AdminPanel() {
             <Text style={styles.pageTitle}>{config.label}</Text>
             <Text style={{ color: '#666' }}>{data.length} Total Records</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => {setEditingId(null); setFormData({username:'', email:'', phone_number:'', full_name:''}); setModalVisible(true)}}>
+          <TouchableOpacity style={styles.addButton} onPress={() => {setEditingId(null); setFormData({username:'', email:'', phone_number:'', full_name:'', password:'', confirmPassword:''}); setModalVisible(true)}}>
             <Text style={{ color: '#fff', fontWeight: 'bold' }}>+ New User</Text>
           </TouchableOpacity>
         </View>
@@ -254,8 +282,19 @@ export default function AdminPanel() {
                     </Text>
                   ))}
                   <View style={[styles.actionCell, { width: 120 }]}>
-                    <TouchableOpacity onPress={() => {setEditingId(item.id); setFormData({username: item.username, email: item.email, phone_number: item.phone_number ? String(item.phone_number): '', full_name: item.full_name}); setModalVisible(true)}}>
-                      <Text style={styles.editBtn}>Edit</Text>
+                    <TouchableOpacity onPress={() => {
+                      setEditingId(item.id);
+                      setFormData({
+                        username: item.username,
+                        email: item.email,
+                        phone_number: item.phone_number ? String(item.phone_number) : '',
+                        full_name: item.full_name,
+                        password: '',         // never prefill password on edit
+                        confirmPassword: ''   // never prefill password on edit
+                      });
+                      setModalVisible(true);
+                    }}>                      
+                    <Text style={styles.editBtn}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => confirmDelete(item.id)}>
                       <Text style={styles.deleteBtn}>Del</Text>

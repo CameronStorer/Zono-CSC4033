@@ -7,38 +7,39 @@ LOGIN PAGE
 // necessary imports
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Text, View, StyleSheet, Platform, TextInput, Image, TouchableOpacity } from "react-native";
+import { Alert, Text, View, StyleSheet, Platform, TextInput, Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/app/(app)/database/supabase';
+import { supabase } from '@/components/supabase';
+import { useAuth } from '@/components/auth-context'
 
 // page layout
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
-  // sends the email and password to supabase
   async function handleLogin() {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
 
-    // error occured -> throw error message
-    if (error) {
-      Alert.alert("Login error: ", error.message);
-    }
-    // correct credentials -> throw success message, reroute user to map
-    else if (data.user) {
-      Alert.alert("Successful login.");
-      router.replace('/(app)/map');
-    }
-    // incorrect credentials -> throw failure message
-    else {
-      Alert.alert("Incorrect credentials. Try again!");
+      if (error) {
+        Alert.alert("Login error", error.message);
+      }
+      // If successful, the RouteGuard in your (login)/_layout 
+      // will detect the session and redirect automatically.
+    } catch (e) {
+      if (e instanceof Error) {
+        Alert.alert("Unexpected Error", e.message);
+      }
+    } finally {
+      setLoading(false);
     }
   }
-
   return (
     // code to ensure that the page content doesn't fall under the nav bar
     <SafeAreaView
@@ -74,17 +75,27 @@ export default function Login() {
               placeholder="PASSWORD"
               placeholderTextColor="#c0c0c0"
               secureTextEntry // hides the password text
+              autoCapitalize="none"
               value={password}
               onChangeText={setPassword}
             />
 
 
-            <TouchableOpacity 
-              style={styles.loginButton} 
-              onPress={handleLogin}>
-
-              <Text style={styles.loginButtonText}>LOG IN</Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+                onPress={handleLogin} // This is the crucial link
+                disabled={loading}
+                style={{ 
+                  backgroundColor: loading ? '#ccc' : '#007AFF', 
+                  padding: 15, 
+                  borderRadius: 8 
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', textAlign: 'center' }}>Sign In</Text>
+                )}
+              </TouchableOpacity>
 
 
             <TouchableOpacity 

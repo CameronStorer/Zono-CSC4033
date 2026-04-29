@@ -1,31 +1,40 @@
-import { NativeTabs, Label, Icon } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
-import { Colors } from '@/constants/theme';
+// app/(app)/_layout.tsx
+import { Slot } from 'expo-router'
+import { NativeTabs, Label, Icon } from 'expo-router/unstable-native-tabs'
+import { useAuth } from '@/components/auth-context'
+import { useTheme } from '@react-navigation/native'
+import { useColorScheme } from 'react-native'
+import { Colors } from '@/constants/theme'
 
 export default function AppLayout() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme ?? 'light'];
+  const { role } = useAuth()
+  const scheme = useColorScheme()
+  const C = Colors[scheme ?? 'light']
 
-  // navigation bar initialization upon entering (app)/
-  // `NativeTabs.Trigger`is a button to expo router that goes to that
-  // referenced page in the 'name' prop
   return (
     <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      backgroundColor={C.background}
+      indicatorColor={C.backgroundElement}
+      labelStyle={{ selected: { color: C.text } }}>
+
       <NativeTabs.Trigger name="map/index">
         <Label>Map</Label>
         <Icon src={require('@/assets/images/map-icon.png')} />
       </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="settings/index">
         <Label>Settings</Label>
         <Icon src={require('@/assets/images/settings-icon.png')} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile/index">
-        <Label>Profile</Label>
-        <Icon src={require('@/assets/images/profile-icon.png')} />
-      </NativeTabs.Trigger>
+
+      {role === 'admin' && (
+        <NativeTabs.Trigger name="admin-panel/index">
+          <Label>Admin</Label>
+          <Icon src={require('@/assets/images/database-icon.png')} />
+        </NativeTabs.Trigger>
+      )}
+
+
     </NativeTabs>
-  );
+  )
 }

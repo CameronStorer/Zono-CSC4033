@@ -1,31 +1,46 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity,  Pressable,
-  Alert, Dimensions, Modal, TextInput, RefreshControl, StyleSheet, Animated
+  Alert, Dimensions, Modal, TextInput, RefreshControl, StyleSheet, Animated, Button
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LineChart } from 'react-native-chart-kit';
-import { DATABASE_CONFIG, upsertRow } from '@/app/(app)/settings/logic';
-import { styles } from '@/app/(app)/settings/style'; // Use your external styles
-import { supabase } from '@/app/(app)/database/supabase';
+import { LineChart,  } from 'react-native-chart-kit';
+import { DATABASE_CONFIG, upsertRow } from '@/app/(app)/settings/_logic';
+import { styles } from '@/app/(app)/settings/_style'; // Use your external styles
+import { supabase } from '@/components/supabase';
+import { useAuth } from '@/components/auth-context'
+import { useRouter } from 'expo-router';
 
 // admin panel page
 export default function Settings() {
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ username: '', email: '', phone_number: '', full_name: ''});
-
   const config = DATABASE_CONFIG.users;
   const screenWidth = Dimensions.get("window").width;
-
   const [isOn, setIsOn] = useState(false);
+  const { profile, role, signOut } = useAuth()
 
+
+  // Inside your component:
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      // This forces the app to move back to the login screen
+      router.replace('/(login)'); 
+    }
+  }
 
   // Logic: Filter data based on search
   const filteredData = useMemo(() => {
@@ -39,38 +54,43 @@ export default function Settings() {
   // admin panel page structure
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
-      <ScrollView 
-        contentContainerStyle={styles.container}
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerActionRow}>
+
           <View>
             <Text style={styles.pageTitle}>{config.label}</Text>
           </View>
+
         </View>
 
 
         {/* example button */}
         <View style={styles.container}>
+          <Text style = {{ color: 'white' }}>Name: {profile?.full_name}</Text>
+          <Text style = {{ color: 'white' }}>Username: {profile?.username}</Text>
+          {role === 'admin' && <Text style = {{ color: 'white' }}>You are an admin.</Text>}
+
           <Pressable
-            onPress={() => console.log('Example Button Pressed!')}
+            onPress={signOut}
             // This function allows us to change style based on the 'pressed' state
             style={({ pressed }) => [
               {
                 backgroundColor: pressed ? '#004080' : '#007AFF',
                 transform: [{ scale: pressed ? 0.96 : 1.0 }] // Shrinks slightly when pressed
               },
-              styles.button,
-            ]}
-          >
-            <Text style={styles.buttonText}>Button Example</Text>
+              styles.button,]}>
+
+            <Text style={styles.buttonText}>Sign Out</Text>
           </Pressable>
         </View>
 
 
 
-            <View style={styles.container}>
-      <Text style={styles.statusText}>{isOn ? "Switch is ON" : "Switch is OFF"}</Text>
 
+      <View style={styles.container}>
+      <Text style={[styles.statusText, { color: '#FFFFFF' }]}>
+        {isOn ? "Switch is ON" : "Switch is OFF"}
+      </Text>
       {/* The Pressable acts as the interactive area */}
       <Pressable
         onPress={() => setIsOn(!isOn)}
