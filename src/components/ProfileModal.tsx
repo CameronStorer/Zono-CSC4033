@@ -1,3 +1,4 @@
+import { UserProfile } from '@/services/profileService';
 import React from 'react';
 import {
   Modal,
@@ -5,14 +6,16 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image
 } from 'react-native';
 
 type ProfileModalProps = {
   visible: boolean;
   onClose: () => void;
+  profile: UserProfile | null;
 };
 
-export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
+export default function ProfileModal({ visible, onClose, profile}: ProfileModalProps) {
   return (
     <Modal
       visible={visible}
@@ -27,23 +30,41 @@ export default function ProfileModal({ visible, onClose }: ProfileModalProps) {
           </TouchableOpacity>
 
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarIcon}>👤</Text>
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Image
+                source={require('../../assets/images/default-avatar.png')}
+                style={styles.avatarImage}
+              />
+            )}
           </View>
 
-          <Text style={styles.name}>Iris</Text>
-          <Text style={styles.username}>@iris</Text>
+          <Text style={styles.name}>
+            {profile?.full_name || 'Unknown User'}
+          </Text>
+          <Text style={styles.username}>
+            @{profile?.username || 'username'}
+          </Text>
 
           <View style={styles.infoCard}>
             <Text style={styles.cardTitle}>Profile</Text>
             <Text style={styles.cardText}>Friends: 1</Text>
-            <Text style={styles.cardText}>Status: Online</Text>
-            <Text style={styles.cardText}>Location sharing: On</Text>
+            <Text style={styles.cardText}>
+              Status: {profile?.status || 'No status'}
+            </Text>
+            <Text style={styles.cardText}>
+              Location sharing: {profile?.location_sharing || 'Unknown'}
+            </Text>
           </View>
 
           <View style={styles.infoCard}>
             <Text style={styles.cardTitle}>Add more friends</Text>
             <Text style={styles.cardText}>
-              Profile picture can be added later from Supabase Storage.
+              Bio: {profile?.bio || 'No bio yet'}
             </Text>
           </View>
         </View>
@@ -98,6 +119,11 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'white',
   },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 55,
+  },
 
   avatarIcon: {
     fontSize: 56,
@@ -134,4 +160,5 @@ const styles = StyleSheet.create({
     color: '#555',
     marginBottom: 4,
   },
+  
 });

@@ -1,8 +1,8 @@
 // default file that expo will grab for the import in map.tsx
 // if you are using Expo Go/are on mobile
-import React, { useMemo, useState } from 'react';
+import React, {useEffect,useMemo, useState } from 'react';
 import MapView, {Marker, Polyline, Callout} from 'react-native-maps';
-import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
@@ -10,6 +10,7 @@ import { searchUserByUserName, sendFriendRequest } from '@/services/friendServic
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
 import { styles } from '@/app/(app)/map/styles'; // Use your external styles
 import ProfileModal from '@/components/ProfileModal';
+import { getCurrentUserProfile,UserProfile } from '@/services/profileService';
 
 export default function MapComponent() {
 
@@ -36,6 +37,16 @@ export default function MapComponent() {
 
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
+  const [profile,setProfile] = useState <UserProfile |null>(null);
+
+  useEffect(() => {
+    async function loadProfile(){
+      const userProfile = await getCurrentUserProfile();
+      setProfile(userProfile);
+    }
+    loadProfile();
+  },[]) // the effect does not rerun when it reloading the page
+  
 
   // function get the name of place, async- get data from server
   async function handleFriendPress(friend: UserLocation){
@@ -188,7 +199,10 @@ export default function MapComponent() {
         onPress={() => setProfileVisible(true)}
         activeOpacity={0.8}
       >
-        <Text style={styles.profileCircleText}>👤</Text>
+        <Image
+          source={require('../../assets/images/default-avatar.png')}
+          style={styles.profileAvatar}
+        />
          {/* later this should be changed into picture, this is the default */}
 
       </TouchableOpacity>
@@ -273,6 +287,7 @@ export default function MapComponent() {
       <ProfileModal
         visible={profileVisible}
         onClose={() => setProfileVisible(false)}
+        profile={profile}
       />
 
       
