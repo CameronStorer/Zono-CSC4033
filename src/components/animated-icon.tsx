@@ -1,131 +1,69 @@
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
-import Animated, { Easing, Keyframe, runOnJS } from 'react-native-reanimated';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Dimensions } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
-const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
-const DURATION = 600;
+const { width, height } = Dimensions.get('window');
 
 export function AnimatedSplashOverlay() {
-  const [visible, setVisible] = useState(true);
+  const [isAppReady, setAppReady] = useState(false);
+  const animation = useRef(new Animated.Value(1)).current; // Opacity 1 to 0
+  const scale = useRef(new Animated.Value(1)).current;     // Scale 1 to 1.5
 
-  if (!visible) return null;
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Keep the native splash visible while we load resources
+        await SplashScreen.preventAutoHideAsync();
+        // Simulate a small delay for the animation to feel natural
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setAppReady(true);
+      }
+    }
+    prepare();
+  }, []);
 
-  const splashKeyframe = new Keyframe({
-    0: {
-      transform: [{ scale: INITIAL_SCALE_FACTOR }],
-      opacity: 1,
-    },
-    20: {
-      opacity: 1,
-    },
-    70: {
-      opacity: 0,
-      easing: Easing.elastic(0.7),
-    },
-    100: {
-      opacity: 0,
-      transform: [{ scale: 1 }],
-      easing: Easing.elastic(0.7),
-    },
-  });
+  useEffect(() => {
+    if (isAppReady) {
+      // Run both Opacity and Scale animations together
+      Animated.parallel([
+        Animated.timing(animation, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.5,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Once our animation finishes, hide the native splash
+        SplashScreen.hideAsync();
+      });
+    }
+  }, [isAppReady]);
+
+  if (!isAppReady) return null;
 
   return (
     <Animated.View
-      entering={splashKeyframe.duration(DURATION).withCallback((finished) => {
-        'worklet';
-        if (finished) {
-          runOnJS(setVisible)(false);
-        }
-      })}
-      style={styles.backgroundSolidColor}
-    />
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: '#000000', // Match your splash.png background color
+          opacity: animation,
+          transform: [{ scale }],
+          zIndex: 9999, // Ensure it stays on top during transition
+        },
+      ]}
+    >
+      {/* Optional: If you want an icon to animate specifically, 
+        add an <Animated.Image /> here matching your splash icon 
+      */}
+    </Animated.View>
   );
 }
-
-const keyframe = new Keyframe({
-  0: {
-    transform: [{ scale: INITIAL_SCALE_FACTOR }],
-  },
-  100: {
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
-const logoKeyframe = new Keyframe({
-  0: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-  },
-  40: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-    easing: Easing.elastic(0.7),
-  },
-  100: {
-    opacity: 1,
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '0deg' }],
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }],
-  },
-});
-
-export function AnimatedIcon() {
-  return (
-    <View style={styles.iconContainer}>
-      <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} style={styles.glow}>
-        <Image style={styles.glow} source={require('@/assets/images/logo-glow.png')} />
-      </Animated.View>
-
-      <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
-      <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>
-        <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
-      </Animated.View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  imageContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  glow: {
-    width: 201,
-    height: 201,
-    position: 'absolute',
-  },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 128,
-    height: 128,
-    zIndex: 100,
-  },
-  image: {
-    position: 'absolute',
-    width: 76,
-    height: 71,
-  },
-  background: {
-    borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
-    width: 128,
-    height: 128,
-    position: 'absolute',
-  },
-  backgroundSolidColor: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#208AEF',
-    zIndex: 1000,
-  },
-});

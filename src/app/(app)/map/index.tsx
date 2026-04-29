@@ -8,7 +8,7 @@ import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest } from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
-import { styles } from '@/app/(app)/map/styles'; // Use your external styles
+import { styles } from '@/app/(app)/map/_styles'; // Use your external styles
 import ProfileModal from '@/components/ProfileModal';
 import { getCurrentUserProfile,UserProfile } from '@/services/profileService';
 
