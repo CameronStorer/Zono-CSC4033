@@ -8,6 +8,7 @@ export const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+
   calloutBox: {
     minWidth: 160,
     padding: 4,
@@ -16,6 +17,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+
   bottomCard: {
     position: 'absolute',
     left: 16,
@@ -25,6 +27,7 @@ export const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
   },
+
   cardTitle: {
     fontSize: 22,
     fontWeight: '600',
@@ -43,6 +46,42 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  profileCircle: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    zIndex: 20,
+    elevation: 8,
+    // small shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+
+  profileCircleText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+  },
+
+  profileAvatar: {
+  width: '100%',
+  height: '100%',
+  borderRadius: 27,
+  },
+
   bellCircle: {
     position: 'absolute',
     top: 135,

@@ -9,6 +9,7 @@ import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest } from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
 import { styles } from '@/app/(app)/map/styles'; // Use your external styles
+import ProfileModal from '@/components/ProfileModal';
 
 export default function MapComponent() {
 
@@ -26,12 +27,15 @@ export default function MapComponent() {
   // replace this with your real logged-in user id later if needed
  const currentUserId = Number(currentUser.id ?? 1);
 
-  // useMemo only recompute distance text when selected friend change
+  // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
     if (!selectedFriend) return '';
     const meters = getDistanceMeters(currentUser, selectedFriend);
     return formatDistance(meters);
   }, [selectedFriend]); //recompute distance text when we have selected friend
+
+  //User Profile use to manipulate the pop-up modal
+  const [profileVisible, setProfileVisible] = useState(false);
 
   // function get the name of place, async- get data from server
   async function handleFriendPress(friend: UserLocation){
@@ -126,6 +130,7 @@ export default function MapComponent() {
           longitudeDelta: 0.02,
         }}
       >
+        {/* User detail on top of the marker on map */}
         <Marker
           coordinate={{
             latitude: currentUser.latitude,
@@ -158,7 +163,7 @@ export default function MapComponent() {
             </Callout>
           </Marker>
         ))}
-
+        {/* draw the line between 2 users for illustrate the distance  */}
         {selectedFriend && (
           <Polyline
             coordinates={[
@@ -176,6 +181,17 @@ export default function MapComponent() {
           />
         )}
       </MapView>
+
+      {/* add profile button */}
+      <TouchableOpacity
+        style={styles.profileCircle}
+        onPress={() => setProfileVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.profileCircleText}>👤</Text>
+         {/* later this should be changed into picture, this is the default */}
+
+      </TouchableOpacity>
 
       {/* add friend button */}
       <TouchableOpacity
@@ -253,6 +269,14 @@ export default function MapComponent() {
         </View>
       </Modal>
 
+      {/* Profile Modal */}
+      <ProfileModal
+        visible={profileVisible}
+        onClose={() => setProfileVisible(false)}
+      />
+
+      
+      {/* A Card at the bottom about name and current location of user */}
       {selectedFriend && (
         <View style={styles.bottomCard}>
           <Text style={styles.cardTitle}>{selectedFriend.name}</Text>
