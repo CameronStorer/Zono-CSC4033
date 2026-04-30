@@ -11,6 +11,7 @@ import type { UserLocation as FriendSearchUser } from '@/types/friend';
 import { styles } from '@/app/(app)/map/_styles'; // Use your external styles
 import ProfileModal from '@/components/ProfileModal';
 import { getCurrentUserProfile,UserProfile } from '@/services/profileService';
+import { supabase } from '@/components/supabase'; // tia
 
 export default function MapComponent() {
 
@@ -24,6 +25,7 @@ export default function MapComponent() {
   const [searchResults, setSearchResults] = useState<FriendSearchUser[]>([]);
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [friendIds, setFriendIds] = useState<number[]>([]); // tia: keeps track of who is already your friend
 
   // replace this with your real logged-in user id later if needed
  const currentUserId = Number(currentUser.id ?? 1);
@@ -80,48 +82,143 @@ export default function MapComponent() {
   }
 
   /// function for Handling for Search Bar - add friend 
+  // tia - made changes so now it shows if they are friends or not
   async function handleSearchChange(text: string) {
-    setSearchText(text);
+   
+    setSearchText(text); // what the user typed
 
+
+    // handles empty input
     if (!text.trim()) {
       setSearchResults([]);
+      setFriendIds([]);
       return;
     }
+
 
     try {
       setIsSearching(true);
-      const users = await searchUserByUserName(text);
 
-      // do not show yourself in search result
-      const filteredUsers = users.filter((user) => user.id !== currentUserId);
+
+      // search all users from the database
+      const users = await searchUserByUserName(text.trim());
+
+
+      // remove yourself from the results
+      const filteredUsers = users.filter(
+        (user) => Number(user.id) !== currentUserId
+      );
+
+
+      // get the ids from the searched users
+      const searchedUserIds = filteredUsers.map(
+        (user) => Number(user.id)
+      );
+
+
+      // check which of those users are already your friends
+      const { data: friendshipData, error: friendshipError } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', currentUserId)
+        .eq('status', 'friends')
+        .in('friend_id', searchedUserIds);
+
+
+      // throws error when friend lookup fails
+      if (friendshipError) {
+        console.log('friendship lookup error:', friendshipError);
+      }
+
+
+      // extract friend ids
+      const existingFriendIds =
+        friendshipData?.map((row) => Number(row.friend_id)) ?? [];
+
+
+      // save friend ids
+      setFriendIds(existingFriendIds);
+
+
+      // show all searched users
       setSearchResults(filteredUsers);
+
+
+      // throws error when search user fails
     } catch (error) {
-        console.log('search users error:', error);
+      console.log('search users error:', error);
       setSearchResults([]);
+      setFriendIds([]);
+
+
+      // stop loading
     } finally {
-        setIsSearching(false);
+      setIsSearching(false);
     }
   }
 
-  async function handleAddFriend(targetUserId: number) {
-    const isRequested = requestedIds.includes(targetUserId);
 
-    if (isRequested) {
-      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
+  async function handleAddFriend(targetUserId: number) {
+  try {
+
+    // insert a new row into the "friendships" table
+    // this creates a relationship between the current user and the target user
+    const { error } = await supabase
+      .from('friendships')
+      .insert({
+        user_id: currentUserId,   // the logged-in user
+        friend_id: targetUserId,  // the user being added
+        status: 'friends',        // marks them as friends (not pending)
+      });
+
+    // if supabase returns an error, log it and stop execution
+    if (error) {
+      console.log('add friend error:', error);
       return;
     }
 
-    setRequestedIds((prev) => [...prev, targetUserId]);
+    // update the local state so the UI instantly reflects the new friend
+    // this makes the button switch from "Add Friend" → "Unfollow"
+    setFriendIds((prev) => [...prev, targetUserId]);
 
-    try {
-      await sendFriendRequest(currentUserId, targetUserId);
-    } catch (error) {
-      console.log('send friend request error:', error);
+  } catch (error) {
 
-      // rollback if request failed
-      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
-    }
+    // catch any unexpected errors (network issues, etc.)
+    console.log('add friend error:', error);
   }
+}
+
+
+  // tia unfollow function
+  async function handleUnfollow(targetUserId: number) {
+  try {
+
+
+    // delete the friendship row from supabase
+    const { error } = await supabase
+      .from('friendships')
+      .delete()
+      .eq('user_id', currentUserId)
+      .eq('friend_id', targetUserId);
+
+
+    // if supabase throws an error, throw the error on the app
+    if (error) {
+      console.log('unfollow error:', error);
+      return;
+    }
+
+
+    // remove the removed friend from the friend's list. makes it
+    // go from unfollow friend back to add friend
+    setFriendIds((prev) => prev.filter((id) => id !== targetUserId));
+ 
+    // throw any other errors that may appear
+  } catch (error) {
+    console.log('unfollow error:', error);
+  }
+}
+
 
   function closeSearchModal() {
     setSearchModalVisible(false);
@@ -253,6 +350,8 @@ export default function MapComponent() {
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => {
                 const isRequested = requestedIds.includes(item.id);
+                const itemId = Number(item.id); // tia
+                const isFriend = friendIds.includes(itemId); // tia
 
                 return (
                   <View style={styles.resultRow}>
@@ -266,12 +365,12 @@ export default function MapComponent() {
                     <TouchableOpacity
                       style={[
                         styles.addButton,
-                        isRequested && styles.requestedButton,
+                        (isRequested || isFriend) && styles.requestedButton,
                       ]}
-                      onPress={() => handleAddFriend(item.id)}
+                      onPress={() => isFriend ? handleUnfollow(item.id) : handleAddFriend(itemId)}
                     >
                       <Text style={styles.addButtonText}>
-                        {isRequested ? 'Requested' : 'Add Friend'}
+                        {isFriend ? 'Unfollow' : isRequested ? 'Requested' : 'Add Friend'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -288,7 +387,6 @@ export default function MapComponent() {
         onClose={() => setProfileVisible(false)}
         profile={profile}
       />
-
       
       {/* A Card at the bottom about name and current location of user */}
       {selectedFriend && (
@@ -305,4 +403,3 @@ export default function MapComponent() {
     </View>
   );
 }
-
