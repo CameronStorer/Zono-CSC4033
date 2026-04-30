@@ -1,4 +1,4 @@
-import {supabase} from '@/components/supabase';
+import { supabase } from '@/components/supabase';
 import type {
     FriendPreview,
     FriendRequestRow,
@@ -7,7 +7,6 @@ import type {
     UserLocation
 } from '@/types/friend';
 
-//async fuction allow to run in background
 export async function searchUserByUserName( searchText:string):Promise<UserLocation[]>{
     if(!searchText.trim()) return [];
 
@@ -20,7 +19,6 @@ export async function searchUserByUserName( searchText:string):Promise<UserLocat
         console.log('searchUsersByUsername error:', error);
         throw error;
     };
-    // return that data from that user if have, if not just []
     return data ?? [];
 
 }
@@ -41,7 +39,6 @@ export async function sendFriendRequest (sender_ID: number, receiver_ID:number):
         console.log('sendFriendRequest error:', error);
         throw error;
     };
-    // return that data from that user if have, if not just []
     return data
 }
 
@@ -60,7 +57,7 @@ export async function getPendingRequest (userID: number): Promise<FriendRequestR
     // return that data from that user if have, if not just []
     return data ?? []; 
 }
-// get list of send request from a user
+
 export async function getSentRequests(userId: number): Promise<FriendRequestRow[]> {
   const { data, error } = await supabase
     .from('friend_requests')
@@ -75,7 +72,6 @@ export async function getSentRequests(userId: number): Promise<FriendRequestRow[
   return data ?? [];
 }
 
-// from a resquestID, get the current status for that case, update the status with time 
 export async function updateFriendRequestStatus(
     requestId: number,
     status: FriendRequestStatus): Promise<FriendRequestRow | null> {
@@ -115,7 +111,6 @@ export async function acceptFriendRequest(requestId: number): Promise<FriendRequ
 
     const acceptedRequest = await updateFriendRequestStatus(requestId, 'accepted');
 
-    // error is the respond form supabase
     const { error: insertError } = await supabase.from('friendships').insert([
         {
         user_id: requestRow.sender_id,
