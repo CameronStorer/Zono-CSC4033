@@ -143,6 +143,12 @@ export default function MapComponent() {
 
       setPermissionGranted(true);
 
+      // prevents map buffering after granting user permissions
+      const lastKnownLocation = await Location.getLastKnownPositionAsync();
+      if (lastKnownLocation) {
+        setUserLocation(lastKnownLocation);
+      }
+
       const currentLocation = await Location.getCurrentPositionAsync();
       setUserLocation(currentLocation);
 
