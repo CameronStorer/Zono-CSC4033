@@ -249,7 +249,7 @@ async function handleBlockUsers(targetUserId: number) {
     const { error } = await supabase
       .from('blocks')
       .insert({
-        blocker_id: currentUser,
+        blocker_id: currentUserId,
         blocked_id: targetUserId,
       });
 
