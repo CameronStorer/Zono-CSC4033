@@ -27,10 +27,6 @@ export default function Map() {
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [friendIds, setFriendIds] = useState<number[]>([]); // tia: keeps track of who is already your friend
 
-  // replace this with your real logged-in user id later if needed
-  //const currentUserId = Number(currentUser.id ?? 1);
-  const currentUserId = profile?.id;
-
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
     if (!selectedFriend) return '';
@@ -41,6 +37,9 @@ export default function Map() {
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
   const [profile, setProfile] = useState <UserProfile |null>(null);
+  // replace this with your real logged-in user id later if needed
+  //const currentUserId = Number(currentUser.id ?? 1);
+  const currentUserId = profile?.id;
 
   useEffect(() => {
     async function loadProfile(){
