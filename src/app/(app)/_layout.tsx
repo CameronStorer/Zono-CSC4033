@@ -1,8 +1,5 @@
-// app/(app)/_layout.tsx
-import { Slot } from 'expo-router'
 import { NativeTabs, Label, Icon } from 'expo-router/unstable-native-tabs'
 import { useAuth } from '@/components/auth-context'
-import { useTheme } from '@react-navigation/native'
 import { useColorScheme } from 'react-native'
 import { Colors } from '@/constants/theme'
 
@@ -33,8 +30,6 @@ export default function AppLayout() {
           <Icon src={require('@/assets/images/database-icon.png')} />
         </NativeTabs.Trigger>
       )}
-
-
     </NativeTabs>
   )
 }

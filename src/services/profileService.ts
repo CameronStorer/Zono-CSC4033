@@ -1,4 +1,4 @@
-import {supabase} from '@/components/supabase'
+import { supabase } from '@/components/supabase'
 
 export type UserProfile = {
     id: number;
@@ -17,14 +17,14 @@ export type UserProfile = {
 };
 
 export async function getCurrentUserProfile(): Promise<UserProfile |null>{
-    const {data: {user},error: authError} = await supabase.auth.getUser();
+    const { data: {user}, error: authError } = await supabase.auth.getUser();
 
     if (authError) {
-        console.log('get user error:', authError);
+        console.log('getCurrentUserProfile authError:', authError);
         return null;
     }
 
-    if (!user){
+    if (!user) {
         return null;
     }
 
@@ -33,11 +33,23 @@ export async function getCurrentUserProfile(): Promise<UserProfile |null>{
         .select(
         'id, uid, username, full_name, bio, avatar_url, email, phone_number, status, last_online, location_sharing, last_lat, last_lng')
         .eq('uid', user.id)
-        .single(); // make sure return exactly 1 row 
+        .single(); // will return exactly 1 row from the users table 
     
-    if (error){
-        console.log('get profile error:', error);
+    if (error) {
+        console.log('getCurrentUserProfile error:', error);
         return null;
     }
+
     return data;
+}
+
+export async function updateUserLocation(userId: number, lat: number, lng: number): Promise<void> {
+    const { error } = await supabase
+        .from('users')
+        .update({ last_lat: lat, last_lng: lng })
+        .eq('id', userId);
+
+    if (error) {
+        console.log('updateUserLocation error: ', error);
+    }
 }

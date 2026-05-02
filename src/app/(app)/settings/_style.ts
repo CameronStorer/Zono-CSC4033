@@ -1,6 +1,5 @@
 // db-styles.ts
-import { StyleSheet, Dimensions, Platform } from 'react-native';
-import { Spacing } from '@/constants/theme';
+import { StyleSheet, Platform } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: { 
