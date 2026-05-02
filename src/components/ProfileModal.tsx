@@ -71,11 +71,14 @@ export default function ProfileModal({ visible, onClose, profile }: ProfileModal
           </TouchableOpacity>
 
           <View style={styles.avatarCircle}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-            ) : (
-              <Image source={require('../../assets/images/default-avatar.png')} style={styles.avatarImage} />
-            )}
+            {profile?.avatar_url
+              ? <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              : <View style={{ width: '100%', height: '100%', backgroundColor: C.accent, borderRadius: 55, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>
+                    {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'}
+                  </Text>
+                </View>
+            }
           </View>
 
           <Text style={styles.name}>{profile?.full_name || 'Unknown User'}</Text>

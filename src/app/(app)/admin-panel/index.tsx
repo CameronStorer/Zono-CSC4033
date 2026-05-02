@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { DATABASE_CONFIG, fetchTableData, deleteRow } from '@/app/(app)/admin-panel/_logic';
 import { makeStyles } from '@/app/(app)/admin-panel/_style';
-import { supabase } from '@/components/supabase';
+import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAppTheme } from '@/contexts/theme-context';
 import { SlideScreen } from '@/components/slide-screen';
 
@@ -161,28 +161,15 @@ export default function AdminPanel() {
         if (error) throw error;
 
       } else {
-        // INSERT: create auth user — trigger creates public.users row
-        const { data, error: authError } = await supabase.auth.signUp({
+        // INSERT: admin creates user — no session change, no confirmation email
+        const { error: authError } = await supabaseAdmin.auth.admin.createUser({
           email,
-          password,   // ← user's actual password now
-          options: {
-            data: {
-              full_name,
-              username,
-            },
-          },
+          password,
+          email_confirm: true,
+          user_metadata: { full_name, username },
         });
 
         if (authError) throw authError;
-
-        // If session is null here, email confirmation is still ON
-        // Check your Supabase dashboard or config.toml
-        if (!data.session) {
-          Alert.alert(
-            "Check your email",
-            "A confirmation link was sent. Disable email confirmation in Supabase if you don't want this."
-          );
-        }
       }
 
       setModalVisible(false);
@@ -347,14 +334,24 @@ export default function AdminPanel() {
                placeholderTextColor={C.textPlaceholder}
                keyboardType="email-address"
             />
-             <TextInput 
-               style={styles.input} 
-               placeholder="Phone Number" 
-               value={formData.phone_number} 
-               onChangeText={t => setFormData({...formData, phone_number: t})} 
-               placeholderTextColor={C.textPlaceholder}
-               keyboardType="numeric"
-            />
+            {!editingId && <>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={formData.password}
+                onChangeText={t => setFormData({...formData, password: t})}
+                placeholderTextColor={C.textPlaceholder}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChangeText={t => setFormData({...formData, confirmPassword: t})}
+                placeholderTextColor={C.textPlaceholder}
+                secureTextEntry
+              />
+            </>}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={{ padding: 10, marginRight: 15 }}>
                 <Text style={{ color: '#aaa' }}>Cancel</Text>

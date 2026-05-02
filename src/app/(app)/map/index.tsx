@@ -46,6 +46,7 @@ export default function Map() {
   // replace this with your real logged-in user id later if needed
   //const currentUserId = Number(currentUser.id ?? 1);
   const currentUserId = profile?.id;
+  const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
 
   useEffect(() => {
     getCurrentUserProfile().then(p => { if (p) setProfile(p); });
@@ -377,7 +378,8 @@ async function handleBlockUsers(targetUserId: number) {
               latitude: userLocation!.coords.latitude,
               longitude: userLocation!.coords.longitude,
             }}
-            avatarUrl={ profile?.avatar_url ?? null }
+            avatarUrl={profile?.avatar_url ?? null}
+            initials={initials}
           />
 
           {friends.map((friend) => (
@@ -428,10 +430,12 @@ async function handleBlockUsers(targetUserId: number) {
           onPress={() => setProfileVisible(true)}
           activeOpacity={0.8}
         >
-          <Image
-            source={require('../../../../assets/images/default-avatar.png')}
-            style={styles.profileAvatar}
-          />
+          {profile?.avatar_url
+            ? <Image source={{ uri: profile.avatar_url }} style={styles.profileAvatar} />
+            : <View style={{ width: '100%', height: '100%', backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.profileCircleText}>{initials}</Text>
+              </View>
+          }
 
         </TouchableOpacity>
 
