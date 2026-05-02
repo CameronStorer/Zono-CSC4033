@@ -1,43 +1,47 @@
-import { useEffect } from 'react'
-import { useColorScheme } from 'react-native'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native'
-import { Stack, useRouter, useSegments } from 'expo-router'
-import { AuthProvider, useAuth } from '@/components/auth-context'
+import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { Stack, useRouter } from 'expo-router';
+import { AuthProvider } from '@/components/auth-context';
 import { supabase } from '@/components/supabase';
+import { AppThemeProvider, useAppTheme } from '@/contexts/theme-context';
 
-// Handles redirects based on auth state + role
 function RouteGuard() {
-  const { session, role, loading } = useAuth()
-  const router = useRouter()
-  const segments = useSegments()
+  const router = useRouter();
 
   useEffect(() => {
     supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        router.replace('/(app)/map'); // This is the "bridge" to page after login
+        router.replace('/(app)/map');
       }
     });
   }, []);
 
-    return null
-  }
+  return null;
+}
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme()
+function InnerLayout() {
+  const { resolved } = useAppTheme();
 
   return (
+    <ThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthProvider>
+        <RouteGuard />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(login)" />
+          <Stack.Screen name="(app)" />
+        </Stack>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthProvider>
-          <RouteGuard />
-          <Stack screenOptions={{ headerShown: false }}>
-            {/* start with login before app */}
-            <Stack.Screen name="(login)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-        </AuthProvider>
-      </ThemeProvider>
+      <AppThemeProvider>
+        <InnerLayout />
+      </AppThemeProvider>
     </SafeAreaProvider>
-  )
+  );
 }

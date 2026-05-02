@@ -6,13 +6,19 @@ import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest } from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
-import { styles } from '@/app/(app)/map/_styles'; // Use your external styles
+import { makeStyles } from '@/app/(app)/map/_styles';
 import ProfileModal from '@/components/ProfileModal';
 import { getCurrentUserProfile, UserProfile, updateUserLocation } from '@/services/profileService';
 import { supabase } from '@/components/supabase'; // tia
 import UserMarker from '@/components/user-marker';
+import { useAppTheme } from '@/contexts/theme-context';
+import { darkMapStyle } from '@/constants/map-styles';
+import { SlideScreen } from '@/components/slide-screen';
 
 export default function Map() {
+  const { colors: C, resolved } = useAppTheme();
+  const styles = useMemo(() => makeStyles(C), [resolved]);
+
   // the current selected friend, then use the function, base on select state
   const [selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
   const [selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
@@ -42,12 +48,14 @@ export default function Map() {
   const currentUserId = profile?.id;
 
   useEffect(() => {
-    async function loadProfile(){
-      const userProfile = await getCurrentUserProfile();
-      setProfile(userProfile);
+    getCurrentUserProfile().then(p => { if (p) setProfile(p); });
+  }, [])
+
+  useEffect(() => {
+    if (profileVisible) {
+      getCurrentUserProfile().then(p => { if (p) setProfile(p); });
     }
-    loadProfile();
-  }, []) // the effect does not rerun when reloading the page
+  }, [profileVisible])
   
 
   // function get the name of place, async- get data from server
@@ -327,21 +335,21 @@ async function handleBlockUsers(targetUserId: number) {
 
   if (permissionGranted === null || (permissionGranted === true && userLocation === null)) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
-        <ActivityIndicator size="large" />
-        <Text>Getting your location...</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, backgroundColor: C.bg }]}>
+        <ActivityIndicator size="large" color={C.accent} />
+        <Text style={{ color: C.text }}>Getting your location...</Text>
       </View>
     );
   }
 
   if (permissionGranted === false) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24 }]}>
-        <Text style={{ fontSize: 16, textAlign: 'center' }}>Location access is required to use the map.</Text>
-        <Text style={{ textAlign: 'center', color: '#666' }}>Please enable it in your device settings.</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24, backgroundColor: C.bg }]}>
+        <Text style={{ fontSize: 16, textAlign: 'center', color: C.text }}>Location access is required to use the map.</Text>
+        <Text style={{ textAlign: 'center', color: C.textSecondary }}>Please enable it in your device settings.</Text>
         <TouchableOpacity
           onPress={() => Linking.openSettings()}
-          style={{ marginTop: 8, backgroundColor: '#15fbef', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          style={{ marginTop: 8, backgroundColor: C.mapOpenSettingsBtn, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
         >
           <Text style={{ fontWeight: '600' }}>Open Settings</Text>
         </TouchableOpacity>
@@ -350,9 +358,12 @@ async function handleBlockUsers(targetUserId: number) {
   }
 
   return (
+    <SlideScreen index={0}>
       <View style={styles.container}>
         <MapView
           style={styles.map}
+          userInterfaceStyle={resolved}
+          customMapStyle={resolved === 'dark' ? darkMapStyle : []}
           initialRegion={{
             latitude: userLocation!.coords.latitude,
             longitude: userLocation!.coords.longitude,
@@ -405,7 +416,7 @@ async function handleBlockUsers(targetUserId: number) {
                   longitude: selectedFriend.longitude,
                 },
               ]}
-              strokeColor="#15fbef"
+              strokeColor={C.mapPolyline}
               strokeWidth={6}
             />
           )}
@@ -523,5 +534,6 @@ async function handleBlockUsers(targetUserId: number) {
           </View>
         )}
       </View>
+    </SlideScreen>
     );
 }
