@@ -11,7 +11,7 @@ import ProfileModal from '@/components/ProfileModal';
 import { getCurrentUserProfile, UserProfile, updateUserLocation } from '@/services/profileService';
 import UserMarker from '@/components/user-marker';
 
-export default function MapComponent() {
+export default function Map() {
   // the current selected friend, then use the function, base on select state
   const[selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
   const[selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
