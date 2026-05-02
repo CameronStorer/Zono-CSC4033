@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Text, StyleSheet, Animated } from 'react-native';
+import { View, Image, Text, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
 
 export type UserMarkerProps = {
@@ -32,32 +32,36 @@ export default function UserMarker({ coordinate, avatarUrl }: UserMarkerProps) {
 const styles = StyleSheet.create({
     pin: {
         alignItems: 'center',
+        zIndex: 1,
     },
     avatarCircle: {
         width: 30,
         height: 30,
         borderRadius: 21,
         borderWidth: 3,
-        borderColor: '#154bfb',
+        borderColor: '#ff0000',
         backgroundColor: 'white',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     avatar: {
         width: 24,
-        height: 25,
-        borderRadius: 21,
+        height: 24,
+        borderRadius: 12,
     },
     point: {
         width: 0,
         height: 0,
-        borderLeftWidth: 7,
-        borderRightWidth: 7,
-        borderTopWidth: 10,
+        borderLeftWidth: 8,
+        borderRightWidth: 8,
+        borderTopWidth: 5,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderTopColor: '#15fbef',
+        borderTopColor: '#ff0000',
+        marginTop: -2,
     },
 });
