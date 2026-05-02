@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
         height: 30,
         borderRadius: 21,
         borderWidth: 3,
-        borderColor: '#ff0000',
+        borderColor: '#89faa7',
         backgroundColor: 'white',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 5,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderTopColor: '#ff0000',
+        borderTopColor: '#89faa7',
         marginTop: -2,
     },
 });
