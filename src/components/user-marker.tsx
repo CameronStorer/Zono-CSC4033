@@ -1,4 +1,3 @@
-import React, { useEffect, useRef } from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
 
