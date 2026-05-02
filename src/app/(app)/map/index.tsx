@@ -1,17 +1,18 @@
 // default file that expo will grab for the import in map.tsx
 // if you are using Expo Go/are on mobile
-import React, {useEffect,useMemo, useState } from 'react';
+import React, {use, useEffect,useMemo, useState } from 'react';
 import MapView, {Marker, Polyline, Callout} from 'react-native-maps';
 import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
-import { searchUserByUserName, sendFriendRequest } from '@/services/friendService';
+import { searchUserByUserName, sendFriendRequest, cancelFriendRequest} from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
 import { styles } from '@/app/(app)/map/_styles'; // Use your external styles
 import ProfileModal from '@/components/ProfileModal';
 import { getCurrentUserProfile,UserProfile } from '@/services/profileService';
 import { supabase } from '@/components/supabase'; // tia
+import { Filter } from 'react-native-svg';
 
 export default function MapComponent() {
 
@@ -26,9 +27,7 @@ export default function MapComponent() {
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [friendIds, setFriendIds] = useState<number[]>([]); // tia: keeps track of who is already your friend
-
-  // replace this with your real logged-in user id later if needed
- const currentUserId = Number(currentUser.id ?? 1);
+  const [friendCounts, setFriendCounts] =  useState<Record<number,number>>({}); // store user friend count
 
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
@@ -40,6 +39,8 @@ export default function MapComponent() {
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
   const [profile,setProfile] = useState <UserProfile |null>(null);
+  // replace this with your real logged-in user id later if needed
+  const currentUserId = profile?.id;
 
   useEffect(() => {
     async function loadProfile(){
@@ -84,115 +85,120 @@ export default function MapComponent() {
   /// function for Handling for Search Bar - add friend 
   // tia - made changes so now it shows if they are friends or not
   async function handleSearchChange(text: string) {
-   
-    setSearchText(text); // what the user typed
+    setSearchText(text);
 
-
-    // handles empty input
-    if (!text.trim()) {
+    //no real text - setting nothing
+    if (!text.trim()){
       setSearchResults([]);
       setFriendIds([]);
+      setRequestedIds([]);
+      setFriendCounts({});
       return;
     }
 
+    if (!currentUserId) {
+      console.log('No current user profile yet');
+      return;
+    }
 
     try {
       setIsSearching(true);
-
-
-      // search all users from the database
+      // 1. search all the user from database
       const users = await searchUserByUserName(text.trim());
-
-
-      // remove yourself from the results
+      // 2. remove yourself from the search result
       const filteredUsers = users.filter(
-        (user) => Number(user.id) !== currentUserId
-      );
+        (user) => Number(user.id) !== Number(currentUserId));
+      // get all the IDs of the user not including your self
+      const searchedUserIds = filteredUsers.map((user) => Number(user.id)); 
 
+      if (searchedUserIds.length == 0){
+        setSearchResults([]);
+        setFriendIds([]);
+        setRequestedIds([]);
+        setFriendCounts({});
+        return;
+      }
 
-      // get the ids from the searched users
-      const searchedUserIds = filteredUsers.map(
-        (user) => Number(user.id)
-      );
-
-
-      // check which of those users are already your friends
+      // 3. Check which searched users are already friends with current user
       const { data: friendshipData, error: friendshipError } = await supabase
         .from('friendships')
         .select('friend_id')
         .eq('user_id', currentUserId)
-        .eq('status', 'friends')
         .in('friend_id', searchedUserIds);
 
-
-      // throws error when friend lookup fails
       if (friendshipError) {
         console.log('friendship lookup error:', friendshipError);
       }
 
-
-      // extract friend ids
-      const existingFriendIds =
-        friendshipData?.map((row) => Number(row.friend_id)) ?? [];
-
-
-      // save friend ids
+      const existingFriendIds = friendshipData?.map((row) => (row.friend_id)) ?? []; 
       setFriendIds(existingFriendIds);
 
+      // 4. Check which searched users already have pending request from current user
+      const { data: pendingRequestData, error: pendingRequestError } =
+        await supabase
+          .from('friend_requests')
+          .select('receiver_id')
+          .eq('sender_id', currentUserId)
+          .eq('status', 'pending')
+          .in('receiver_id', searchedUserIds);
 
-      // show all searched users
-      setSearchResults(filteredUsers);
+      if (pendingRequestError) {
+        console.log('pending request lookup error:', pendingRequestError);
+      }
 
+      const existingRequestedIds = pendingRequestData?.map((row)=> Number(row.receiver_id)) ?? [];
+      setRequestedIds(existingRequestedIds);
 
-      // throws error when search user fails
-    } catch (error) {
-      console.log('search users error:', error);
-      setSearchResults([]);
-      setFriendIds([]);
+      //5. Count how many friends each searched user has
+      const { data: friendCountData, error: friendCountError } = await supabase
+        .from('friendships')
+        .select('user_id')
+        .in('user_id', searchedUserIds);
 
+      if (friendCountError) {
+        console.log('friend count lookup error:', friendCountError);
+      }
+      const counts: Record<number,number> = {};
 
-      // stop loading
-    } finally {
-      setIsSearching(false);
-    }
-  }
-
-
-  async function handleAddFriend(targetUserId: number) {
-  try {
-
-    // insert a new row into the "friendships" table
-    // this creates a relationship between the current user and the target user
-    const { error } = await supabase
-      .from('friendships')
-      .insert({
-        user_id: currentUserId,   // the logged-in user
-        friend_id: targetUserId,  // the user being added
-        status: 'friends',        // marks them as friends (not pending)
+      searchedUserIds.forEach((id) => {
+        counts[id] = 0; 
       });
 
-    // if supabase returns an error, log it and stop execution
-    if (error) {
-      console.log('add friend error:', error);
-      return;
-    }
+      friendCountData?.forEach((row) => {
+        const userId = Number(row.user_id);
+        counts[userId] = (counts[userId] ?? 0) + 1; // if userId already exist use that num +1, if not start with 0
+      });
 
-    // update the local state so the UI instantly reflects the new friend
-    // this makes the button switch from "Add Friend" → "Unfollow"
-    setFriendIds((prev) => [...prev, targetUserId]);
+      setFriendCounts(counts);
+      // 6. Show searched users
+      setSearchResults(filteredUsers);
+    } catch (error) {
+        console.log('search users error:', error);
+        setSearchResults([]);
+        setFriendIds([]);
+        setRequestedIds([]);
+        setFriendCounts({});
+      } finally {
+        setIsSearching(false);
+      }
+  }
 
-  } catch (error) {
-
-    // catch any unexpected errors (network issues, etc.)
-    console.log('add friend error:', error);
+  async function handleAddFriend(targetUserId: number) {
+  if (!currentUserId){
+    console.log("No log in user found");
+    return;
+  }
+  try{
+    await sendFriendRequest(currentUserId,targetUserId);
+    setRequestedIds((prevRequestId) =>[...prevRequestId, targetUserId]);
+  }catch (error){
+    console.log("send friend request error", error);
   }
 }
-
 
   // tia unfollow function
   async function handleUnfollow(targetUserId: number) {
   try {
-
 
     // delete the friendship row from supabase
     const { error } = await supabase
@@ -208,7 +214,6 @@ export default function MapComponent() {
       return;
     }
 
-
     // remove the removed friend from the friend's list. makes it
     // go from unfollow friend back to add friend
     setFriendIds((prev) => prev.filter((id) => id !== targetUserId));
@@ -219,6 +224,17 @@ export default function MapComponent() {
   }
 }
 
+  async function handleCancelRequest(targetUserId: number) {
+    if (!currentUserId) return;
+
+    try {
+      await cancelFriendRequest(currentUserId, targetUserId);
+
+      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId ));
+    } catch (error) {
+      console.log('cancel friend request error:', error);
+    }
+  }
 
   function closeSearchModal() {
     setSearchModalVisible(false);
@@ -349,9 +365,10 @@ export default function MapComponent() {
               extraData={requestedIds}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => {
-                const isRequested = requestedIds.includes(item.id);
-                const itemId = Number(item.id); // tia
-                const isFriend = friendIds.includes(itemId); // tia
+                const itemId = Number(item.id);
+                const isRequested = requestedIds.includes(itemId);
+                const isFriend = friendIds.includes(itemId);
+                const count = friendCounts[itemId] ?? 0
 
                 return (
                   <View style={styles.resultRow}>
@@ -359,23 +376,37 @@ export default function MapComponent() {
                       <Text style={styles.resultName}>
                         {item.full_name || item.username}
                       </Text>
+
                       <Text style={styles.resultUsername}>@{item.username}</Text>
+
+                      <Text style={styles.resultUsername}>
+                          {isFriend? `Friends with you • ${count} ${count === 1 ? 'friend' : 'friends'}`
+                            : `${count} ${count === 1 ? 'friend' : 'friends'}`}
+                      </Text>
                     </View>
 
-                    <TouchableOpacity
-                      style={[
-                        styles.addButton,
-                        (isRequested || isFriend) && styles.requestedButton,
-                      ]}
-                      onPress={() => isFriend ? handleUnfollow(item.id) : handleAddFriend(itemId)}
-                    >
-                      <Text style={styles.addButtonText}>
-                        {isFriend ? 'Unfollow' : isRequested ? 'Requested' : 'Add Friend'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              }}
+                    {!isFriend && (
+                      <TouchableOpacity
+                        style={[
+                          styles.addButton,
+                          isRequested && styles.requestedButton,
+                        ]}
+                        onPress={() => {
+                          if (isRequested) {
+                            handleCancelRequest(itemId);
+                          } else {
+                            handleAddFriend(itemId);
+                          }
+                        }}
+                      >
+                        <Text style={styles.addButtonText}>
+                          {isRequested ? 'Requested' : 'Add Friend'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                </View>
+              );
+            }}
             />
           </View>
         </View>

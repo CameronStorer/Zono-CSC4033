@@ -1,13 +1,6 @@
 import { UserProfile } from '@/services/profileService';
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image
-} from 'react-native';
+import {Modal,View,Text,TouchableOpacity,StyleSheet,Image, FlatList} from 'react-native';
 
 type ProfileModalProps = {
   visible: boolean;
@@ -62,9 +55,15 @@ export default function ProfileModal({ visible, onClose, profile}: ProfileModalP
           </View>
 
           <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Add more friends</Text>
+            <Text style={styles.cardTitle}>Bio</Text>
             <Text style={styles.cardText}>
               Bio: {profile?.bio || 'No bio yet'}
+            </Text>
+          </View>
+          <View style={styles.infoCard}>
+            <Text style={styles.cardTitle}>Friends</Text>
+            <Text style={styles.cardText}>
+              Bio: {profile?.bio || 'No Friends'}
             </Text>
           </View>
         </View>
