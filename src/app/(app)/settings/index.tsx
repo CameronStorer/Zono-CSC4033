@@ -275,7 +275,6 @@ export default function Settings() {
         <Text style={styles.sectionLabel}>Theme</Text>
         <View style={styles.sectionCard}>
           <View style={[styles.settingsRow, { paddingVertical: 12 }]}>
-            <Text style={styles.settingsRowLabel}>Theme</Text>
             <View style={styles.themeSelector}>
               {THEME_OPTIONS.map(opt => (
                 <Pressable

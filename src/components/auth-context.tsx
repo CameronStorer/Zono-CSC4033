@@ -13,6 +13,11 @@ type Profile = {
   bio: string | null
   phone_number: string | null
   email: string | null
+  status: string | null
+  last_online: string | null
+  location_sharing: string | null
+  last_lat: number | null
+  last_lng: number | null
 }
 
 type AuthContextType = {

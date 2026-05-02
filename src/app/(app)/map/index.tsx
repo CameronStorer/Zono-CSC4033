@@ -8,8 +8,9 @@ import { searchUserByUserName, sendFriendRequest } from '@/services/friendServic
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
 import { makeStyles } from '@/app/(app)/map/_styles';
 import ProfileModal from '@/components/ProfileModal';
-import { getCurrentUserProfile, UserProfile, updateUserLocation } from '@/services/profileService';
+import { updateUserLocation } from '@/services/profileService';
 import { supabase } from '@/components/supabase'; // tia
+import { useAuth } from '@/components/auth-context';
 import UserMarker from '@/components/user-marker';
 import { useAppTheme } from '@/contexts/theme-context';
 import { darkMapStyle } from '@/constants/map-styles';
@@ -23,7 +24,7 @@ export default function Map() {
   const [selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
   const [selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
 
-    // add friend modal states
+  // add friend modal states
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<FriendSearchUser[]>([]);
@@ -42,21 +43,9 @@ export default function Map() {
 
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
-  const [profile, setProfile] = useState <UserProfile |null>(null);
-  // replace this with your real logged-in user id later if needed
-  //const currentUserId = Number(currentUser.id ?? 1);
+  const { profile } = useAuth();
   const currentUserId = profile?.id;
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
-
-  useEffect(() => {
-    getCurrentUserProfile().then(p => { if (p) setProfile(p); });
-  }, [])
-
-  useEffect(() => {
-    if (profileVisible) {
-      getCurrentUserProfile().then(p => { if (p) setProfile(p); });
-    }
-  }, [profileVisible])
   
 
   // function get the name of place, async- get data from server
