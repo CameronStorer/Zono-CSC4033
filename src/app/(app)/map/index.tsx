@@ -13,8 +13,8 @@ import UserMarker from '@/components/user-marker';
 
 export default function Map() {
   // the current selected friend, then use the function, base on select state
-  const[selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
-  const[selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
+  const [selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
+  const [selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
 
     // add friend modal states
   const [searchModalVisible, setSearchModalVisible] = useState(false);
