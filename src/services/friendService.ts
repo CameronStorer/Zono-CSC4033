@@ -165,3 +165,16 @@ export async function getFriendList(userId: number): Promise<FriendPreview[]> {
 
     return data ?? [];
 }
+
+export async function cancelFriendRequest(senderId: number, receiverId: number) {
+  const { error } = await supabase
+    .from('friend_requests')
+    .delete()
+    .eq('sender_id', senderId)
+    .eq('receiver_id', receiverId)
+    .eq('status', 'pending');
+
+  if (error) {
+    throw error;
+  }
+}
