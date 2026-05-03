@@ -1,6 +1,7 @@
 import { UserProfile } from '@/services/profileService';
 import React, { useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useAppTheme } from '@/contexts/theme-context';
 import { AppColors } from '@/constants/theme';
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, Modal, TextInput,
-  Alert, Image, ActivityIndicator,
+  Alert, ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { makeStyles } from '@/app/(app)/settings/_style';
@@ -202,7 +203,8 @@ export default function Settings() {
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, formData, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      const { error: updateError } = await supabase.from('users').update({ avatar_url: urlData.publicUrl }).eq('uid', profile.uid);
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const { error: updateError } = await supabase.from('users').update({ avatar_url: avatarUrl }).eq('uid', profile.uid);
       if (updateError) throw updateError;
       await refreshProfile(profile.uid);
     } catch (e: any) {

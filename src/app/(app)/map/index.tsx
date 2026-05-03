@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
-import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
