@@ -45,7 +45,6 @@ export default function Map() {
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
   const { profile } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   // replace this with your real logged-in user id later if needed
   //const currentUserId = Number(currentUser.id ?? 1);
   const currentUserId = profile?.id;

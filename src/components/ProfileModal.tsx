@@ -3,8 +3,6 @@ import React, { useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useAppTheme } from '@/contexts/theme-context';
 import { AppColors } from '@/constants/theme';
-import React from 'react';
-import {Modal,View,Text,TouchableOpacity,StyleSheet,Image, FlatList} from 'react-native';
 
 type ProfileModalProps = {
   visible: boolean;
@@ -13,71 +11,6 @@ type ProfileModalProps = {
 };
 
 const makeStyles = (C: AppColors) => StyleSheet.create({
-export default function ProfileModal({ visible, onClose, profile}: ProfileModalProps) {
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.panel}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-
-          <View style={styles.avatarCircle}>
-            {profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_url }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Image
-                source={require('../../assets/images/default-avatar.png')}
-                style={styles.avatarImage}
-              />
-            )}
-          </View>
-
-          <Text style={styles.name}>
-            {profile?.full_name || 'Unknown User'}
-          </Text>
-          <Text style={styles.username}>
-            @{profile?.username || 'username'}
-          </Text>
-
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Profile</Text>
-            <Text style={styles.cardText}>Friends: 1</Text>
-            <Text style={styles.cardText}>
-              Status: {profile?.status || 'No status'}
-            </Text>
-            <Text style={styles.cardText}>
-              Location sharing: {profile?.location_sharing || 'Unknown'}
-            </Text>
-          </View>
-
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Bio</Text>
-            <Text style={styles.cardText}>
-              Bio: {profile?.bio || 'No bio yet'}
-            </Text>
-          </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Friends</Text>
-            <Text style={styles.cardText}>
-              Bio: {profile?.bio || 'No Friends'}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
