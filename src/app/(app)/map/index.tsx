@@ -1,25 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
-import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest, cancelFriendRequest} from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
-import { styles } from '@/app/(app)/map/_styles'; // Use your external styles
+import { makeStyles } from '@/app/(app)/map/_styles';
 import ProfileModal from '@/components/ProfileModal';
 import FriendRequestNotificationModal from '@/components/FriendRequestNotificationModal';
-import { getCurrentUserProfile, UserProfile, updateUserLocation } from '@/services/profileService';
+import { updateUserLocation } from '@/services/profileService';
 import { supabase } from '@/components/supabase'; // tia
+import { useAuth } from '@/components/auth-context';
 import UserMarker from '@/components/user-marker';
 import {getIncomingFriendRequests,acceptFriendRequest,deleteFriendRequest,} from '@/services/notificationService';
+import { useAppTheme } from '@/contexts/theme-context';
+import { darkMapStyle } from '@/constants/map-styles';
+import { SlideScreen } from '@/components/slide-screen';
 
 export default function Map() {
+  const { colors: C, resolved } = useAppTheme();
+  const styles = useMemo(() => makeStyles(C), [resolved]);
+
   // the current selected friend, then use the function, base on select state
   const [selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
   const [selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
 
-    // add friend modal states
+  // add friend modal states
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<FriendSearchUser[]>([]);
@@ -45,7 +53,7 @@ export default function Map() {
 
   //User Profile use to manipulate the pop-up modal
   const [profileVisible, setProfileVisible] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { profile } = useAuth();
   // replace this with your real logged-in user id later if needed
   //const currentUserId = Number(currentUser.id ?? 1);
   const currentUserId = profile?.id;
@@ -54,14 +62,7 @@ export default function Map() {
       loadIncomingRequests();
     }
   }, [currentUserId]);
-
-  useEffect(() => {
-    async function loadProfile(){
-      const userProfile = await getCurrentUserProfile();
-      setProfile(userProfile);
-    }
-    loadProfile();
-  }, []) // the effect does not rerun when reloading the page
+  const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
 
   // function get the name of place, async- get data from server
@@ -377,21 +378,21 @@ export default function Map() {
 
   if (permissionGranted === null || (permissionGranted === true && userLocation === null)) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
-        <ActivityIndicator size="large" />
-        <Text>Getting your location...</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, backgroundColor: C.bg }]}>
+        <ActivityIndicator size="large" color={C.accent} />
+        <Text style={{ color: C.text }}>Getting your location...</Text>
       </View>
     );
   }
 
   if (permissionGranted === false) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24 }]}>
-        <Text style={{ fontSize: 16, textAlign: 'center' }}>Location access is required to use the map.</Text>
-        <Text style={{ textAlign: 'center', color: '#666' }}>Please enable it in your device settings.</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24, backgroundColor: C.bg }]}>
+        <Text style={{ fontSize: 16, textAlign: 'center', color: C.text }}>Location access is required to use the map.</Text>
+        <Text style={{ textAlign: 'center', color: C.textSecondary }}>Please enable it in your device settings.</Text>
         <TouchableOpacity
           onPress={() => Linking.openSettings()}
-          style={{ marginTop: 8, backgroundColor: '#15fbef', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          style={{ marginTop: 8, backgroundColor: C.mapOpenSettingsBtn, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
         >
           <Text style={{ fontWeight: '600' }}>Open Settings</Text>
         </TouchableOpacity>
@@ -400,9 +401,12 @@ export default function Map() {
   }
 
   return (
+    <SlideScreen index={0}>
       <View style={styles.container}>
         <MapView
           style={styles.map}
+          userInterfaceStyle={resolved}
+          customMapStyle={resolved === 'dark' ? darkMapStyle : []}
           initialRegion={{
             latitude: userLocation!.coords.latitude,
             longitude: userLocation!.coords.longitude,
@@ -416,7 +420,8 @@ export default function Map() {
               latitude: userLocation!.coords.latitude,
               longitude: userLocation!.coords.longitude,
             }}
-            avatarUrl={ profile?.avatar_url ?? null }
+            avatarUrl={profile?.avatar_url ?? null}
+            initials={initials}
           />
 
           {friends.map((friend) => (
@@ -455,7 +460,7 @@ export default function Map() {
                   longitude: selectedFriend.longitude,
                 },
               ]}
-              strokeColor="#15fbef"
+              strokeColor={C.mapPolyline}
               strokeWidth={6}
             />
           )}
@@ -467,10 +472,12 @@ export default function Map() {
           onPress={() => setProfileVisible(true)}
           activeOpacity={0.8}
         >
-          <Image
-            source={require('../../../../assets/images/default-avatar.png')}
-            style={styles.profileAvatar}
-          />
+          {profile?.avatar_url
+            ? <Image source={{ uri: profile.avatar_url }} style={styles.profileAvatar} />
+            : <View style={{ width: '100%', height: '100%', backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.profileCircleText}>{initials}</Text>
+              </View>
+          }
 
         </TouchableOpacity>
 
@@ -604,5 +611,6 @@ export default function Map() {
           </View>
         )}
       </View>
+    </SlideScreen>
     );
 }

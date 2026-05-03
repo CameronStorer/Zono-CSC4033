@@ -1,154 +1,283 @@
-// db-styles.ts
 import { StyleSheet, Platform } from 'react-native';
+import { AppColors } from '@/constants/theme';
 
-export const styles = StyleSheet.create({
-  container: { 
-    padding: 20, 
-    paddingBottom: 100 
+export const makeStyles = (C: AppColors) => StyleSheet.create({
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 120,
   },
-  headerActionRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 20 
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: C.text,
+    marginBottom: 24,
   },
-  pageTitle: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#fff' 
-  },
-  addButton: { 
-    backgroundColor: '#6200ee', 
-    paddingHorizontal: 15, 
-    paddingVertical: 8, 
-    borderRadius: 8 
-  },
-  chartCard: { 
-    marginBottom: 25, 
-    alignItems: 'center' 
-  },
-  chartTitle: { 
-    color: '#aaa', 
-    marginBottom: 10, 
-    alignSelf: 'flex-start' 
-  },
-  tableCard: { 
-    backgroundColor: '#16161d', 
-    borderRadius: 12, 
-    overflow: 'hidden',
+  profileCard: {
+    alignItems: 'center',
+    backgroundColor: C.bgElement,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 28,
     borderWidth: 1,
-    borderColor: '#333'
+    borderColor: C.border,
   },
-  colHeaderRow: { 
-    flexDirection: 'row', 
-    backgroundColor: '#1f1f27', 
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333'
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
-  headerCell: { 
-    color: '#888', 
-    fontWeight: 'bold', 
-    paddingHorizontal: 10 
+  avatarText: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 'bold',
   },
-  dataRow: { 
-    flexDirection: 'row', 
-    paddingVertical: 15, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#222',
-    alignItems: 'center'
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 4,
   },
-  dataCell: { 
-    color: '#eee', 
-    paddingHorizontal: 10 
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
-  actionCell: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around' 
+  avatarLoadingOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 36,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  editBtn: { 
-    color: '#4dabf7', 
-    fontWeight: '600' 
+  changePhotoText: {
+    color: C.accent,
+    fontSize: 14,
+    marginBottom: 12,
   },
-  deleteBtn: { 
-    color: '#ff6b6b', 
-    fontWeight: '600' 
+  profileName: {
+    color: C.text,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  input: { 
-    backgroundColor: '#0a0a0f', 
-    color: '#fff', 
-    padding: 12, 
-    borderRadius: 8, 
-    marginBottom: 15, 
-    borderWidth: 1, 
-    borderColor: '#333', // Subtle border
-    fontSize: 16,
-    // Add a slight shadow for depth
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.5,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  profileUsername: {
+    color: C.textSecondary,
+    fontSize: 15,
+    marginBottom: 10,
   },
-  overlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.85)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  adminBadge: {
+    backgroundColor: C.accentBg,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.accentBorder,
   },
-  content: { 
-    backgroundColor: '#16161d', 
-    padding: 25, 
-    borderRadius: 20, 
-    width: '90%', 
-    maxWidth: 400, 
-    borderWidth: 1, 
-    borderColor: '#333' 
-  },
-  title: { 
-    color: '#fff', 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    marginBottom: 20 
-  },
-  // container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-  },
-    statusText: {
-    marginBottom: 20,
-    fontSize: 18,
+  adminBadgeText: {
+    color: C.accent,
+    fontSize: 12,
     fontWeight: '600',
   },
+  sectionLabel: {
+    color: C.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  sectionCard: {
+    backgroundColor: C.bgElement,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 28,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  settingsRowLabel: {
+    color: C.text,
+    fontSize: 16,
+  },
+  settingsRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  settingsRowValue: {
+    color: C.textSecondary,
+    fontSize: 15,
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
+  settingsRowChevron: {
+    color: C.textMuted,
+    fontSize: 20,
+    lineHeight: 22,
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginLeft: 16,
+  },
+  // Theme selector
+  themeSelector: {
+    flexDirection: 'row',
+    backgroundColor: C.bgElevated,
+    borderRadius: 8,
+    padding: 3,
+    gap: 2,
+  },
+  themeOption: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  themeOptionActive: {
+    backgroundColor: C.bgElement,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  themeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: C.textSecondary,
+  },
+  themeOptionTextActive: {
+    color: C.text,
+    fontWeight: '600',
+  },
+  // Sign out
+  signOutButton: {
+    backgroundColor: C.destructiveBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.destructiveBorder,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: C.destructive,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: C.bgElement,
+    borderRadius: 16,
+    padding: 24,
+    width: '88%',
+    borderWidth: 1,
+    borderColor: C.borderMuted,
+  },
+  modalTitle: {
+    color: C.text,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: C.bgInput,
+    color: C.text,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.borderMuted,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  modalInputMultiline: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: C.bgElevated,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: C.textSecondary,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    backgroundColor: C.accent,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Switch (kept for re-use elsewhere)
   switchTrack: {
     width: 60,
     height: 34,
-    borderRadius: 17, // Half of height to make it a pill shape
-    padding: 2,        // Space between track edge and thumb
+    borderRadius: 17,
+    padding: 2,
     justifyContent: 'center',
   },
   thumb: {
     width: 26,
     height: 26,
-    borderRadius: 13, // Half of width to make it a circle
+    borderRadius: 13,
     backgroundColor: 'white',
-    // Add a little shadow to make the thumb "pop"
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 4, // For Android shadow
+    elevation: 4,
   },
+  // Legacy (used by admin-panel styles that share this file)
+  container: { padding: 20, paddingBottom: 100 },
+  headerActionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  input: {
+    backgroundColor: C.bgInput,
+    color: C.text,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: C.borderMuted,
+    fontSize: 16,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 4 },
+      android: { elevation: 3 },
+    }),
+  },
+  button: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 8 },
+  buttonText: { color: '#FFFFFF', fontSize: 18 },
+  statusText: { marginBottom: 20, fontSize: 18, fontWeight: '600' },
 });

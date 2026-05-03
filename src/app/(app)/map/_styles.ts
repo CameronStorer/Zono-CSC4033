@@ -1,58 +1,37 @@
 import { StyleSheet } from 'react-native';
+import { AppColors } from '@/constants/theme';
 
-
-export const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
-
-  calloutBox: {
-    minWidth: 160,
-    padding: 4,
-  },
-  calloutTitle: {
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-
+export const makeStyles = (C: AppColors) => StyleSheet.create({
+  container: { flex: 1 },
+  map: { flex: 1 },
+  calloutBox: { minWidth: 160, padding: 4 },
+  calloutTitle: { fontWeight: '600', marginBottom: 4 },
   bottomCard: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 90,
-    backgroundColor: '#80e0db',
+    left: 16, right: 16, bottom: 90,
+    backgroundColor: C.mapBottomCard,
     padding: 16,
     borderRadius: 16,
   },
-
   cardTitle: {
     fontSize: 22,
     fontWeight: '600',
     marginBottom: 6,
     color: 'white',
   },
-
   addFriendCircle: {
     position: 'absolute',
-    top: 70,
-    right: 20,
-    width: 54,
-    height: 54,
+    top: 70, right: 20,
+    width: 54, height: 54,
     borderRadius: 27,
-    backgroundColor: '#4da6ff',
+    backgroundColor: C.mapButton,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   profileCircle: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    width: 54,
-    height: 54,
+    top: 60, left: 20,
+    width: 54, height: 54,
     borderRadius: 27,
     backgroundColor: 'white',
     alignItems: 'center',
@@ -60,44 +39,23 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 20,
     elevation: 8,
-    // small shadow for iOS
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-
-  profileCircleText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-  },
-
-  profileAvatar: {
-  width: '100%',
-  height: '100%',
-  borderRadius: 27,
-  },
-
+  profileCircleText: { fontSize: 24, fontWeight: '700', color: 'white' },
+  profileAvatar: { width: '100%', height: '100%', borderRadius: 27 },
   bellCircle: {
     position: 'absolute',
-    top: 135,
-    right: 20,
-    width: 54,
-    height: 54,
+    top: 135, right: 20,
+    width: 54, height: 54,
     borderRadius: 27,
-    backgroundColor: '#75d1ff',
+    backgroundColor: C.mapButtonBell,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  circleButtonText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-  },
+  circleButtonText: { fontSize: 24, fontWeight: '700', color: 'white' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.25)',
@@ -106,77 +64,51 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   modalCard: {
-    backgroundColor: 'white',
+    backgroundColor: C.mapModalCard,
     borderRadius: 22,
     padding: 16,
     maxHeight: '70%',
   },
-  searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  searchHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   searchInput: {
     flex: 1,
     height: 48,
     borderWidth: 1,
-    borderColor: '#d9d9d9',
+    borderColor: C.mapSearchBorder,
     borderRadius: 14,
     paddingHorizontal: 14,
     marginRight: 10,
-    backgroundColor: '#fafafa',
+    backgroundColor: C.mapSearchBg,
+    color: C.text,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 36, height: 36,
     borderRadius: 18,
-    backgroundColor: '#efefef',
+    backgroundColor: C.bgElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  searchInfoText: {
-    textAlign: 'center',
-    color: '#666',
-    marginVertical: 12,
-  },
+  closeButtonText: { fontSize: 16, fontWeight: '700', color: C.text },
+  searchInfoText: { textAlign: 'center', color: C.textSecondary, marginVertical: 12 },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: C.mapResultBorder,
   },
-  resultTextBox: {
-    flex: 1,
-    marginRight: 10,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  resultUsername: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 2,
-  },
+  resultTextBox: { flex: 1, marginRight: 10 },
+  resultName: { fontSize: 16, fontWeight: '600', color: C.text },
+  resultUsername: { fontSize: 14, color: C.textSecondary, marginTop: 2 },
   addButton: {
-    backgroundColor: '#4da6ff',
+    backgroundColor: C.mapButton,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
   },
-  requestedButton: {
-    backgroundColor: '#9e9e9e',
-  },
-  addButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
+  requestedButton: { backgroundColor: C.textMuted },
+  addButtonText: { color: 'white', fontWeight: '600' },
 
   notificationDot: {
     position: 'absolute',

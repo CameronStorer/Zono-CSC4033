@@ -1,14 +1,18 @@
 import { View, Image, Text, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
+import { useAppTheme } from '@/contexts/theme-context';
 
 export type UserMarkerProps = {
-    coordinate: { 
-        latitude: number; longitude: number 
+    coordinate: {
+        latitude: number; longitude: number
     };
-    avatarUrl: string | null; // subject to change, depends on how supabase image caching works out
+    avatarUrl: string | null;
+    initials?: string;
 };
 
-export default function UserMarker({ coordinate, avatarUrl }: UserMarkerProps) {
+export default function UserMarker({ coordinate, avatarUrl, initials }: UserMarkerProps) {
+    const { colors: C } = useAppTheme();
+
     return (
         <Marker
             coordinate={coordinate}
@@ -17,10 +21,14 @@ export default function UserMarker({ coordinate, avatarUrl }: UserMarkerProps) {
         >
             <View style={styles.pin}>
                 <View style={styles.avatarCircle}>
-                    <Image
-                        source={ avatarUrl ? { uri: avatarUrl } : require('@/assets/images/default-avatar.png') }
-                        style={styles.avatar}
-                    />
+                    {avatarUrl
+                        ? <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                        : <View style={[styles.avatar, { backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' }]}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>
+                                {initials ?? '?'}
+                            </Text>
+                          </View>
+                    }
                 </View>
                 <View style={styles.point} />
             </View>
@@ -40,6 +48,7 @@ const styles = StyleSheet.create({
         borderWidth: 3,
         borderColor: '#89faa7',
         backgroundColor: 'white',
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,

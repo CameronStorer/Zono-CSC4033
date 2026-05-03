@@ -10,6 +10,14 @@ type Profile = {
   full_name: string
   role: 'user' | 'dev' | 'admin'
   avatar_url: string | null
+  bio: string | null
+  phone_number: string | null
+  email: string | null
+  status: string | null
+  last_online: string | null
+  location_sharing: string | null
+  last_lat: number | null
+  last_lng: number | null
 }
 
 type AuthContextType = {
@@ -19,6 +27,7 @@ type AuthContextType = {
   role: string | null
   loading: boolean
   signOut: () => Promise<void>
+  refreshProfile: (uid: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -95,6 +105,7 @@ const signOut = async () => {
       role: profile?.role ?? null,
       loading,
       signOut,
+      refreshProfile: fetchProfile,
     }}>
       {children}
     </AuthContext.Provider>

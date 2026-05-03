@@ -1,16 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  View, Text, ScrollView, ActivityIndicator, TouchableOpacity, 
-  Alert, Dimensions, Modal, TextInput, RefreshControl, StyleSheet
+import {
+  View, Text, ScrollView, ActivityIndicator, TouchableOpacity,
+  Alert, Dimensions, Modal, TextInput, RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
-import { DATABASE_CONFIG, fetchTableData, deleteRow, upsertRow } from '@/app/(app)/admin-panel/_logic';
-import { styles } from '@/app/(app)/admin-panel/_style'; // Use your external styles
-import { supabase } from '@/components/supabase';
+import { DATABASE_CONFIG, fetchTableData, deleteRow } from '@/app/(app)/admin-panel/_logic';
+import { makeStyles } from '@/app/(app)/admin-panel/_style';
+import { supabase, supabaseAdmin } from '@/components/supabase';
+import { useAppTheme } from '@/contexts/theme-context';
+import { SlideScreen } from '@/components/slide-screen';
 
 // admin panel page
 export default function AdminPanel() {
+  const { colors: C, resolved } = useAppTheme();
+  const styles = useMemo(() => makeStyles(C), [resolved]);
+  const chartConfig = useMemo(() => ({
+    backgroundGradientFrom: C.chartFrom,
+    backgroundGradientTo: C.chartTo,
+    color: (opacity = 1) => `rgba(98, 0, 238, ${opacity})`,
+    labelColor: (opacity = 1) => resolved === 'dark' ? `rgba(255,255,255,${opacity})` : `rgba(51,51,51,${opacity})`,
+    propsForDots: { r: "4", strokeWidth: "2", stroke: "#6200ee" },
+  }), [resolved]);
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,28 +161,15 @@ export default function AdminPanel() {
         if (error) throw error;
 
       } else {
-        // INSERT: create auth user — trigger creates public.users row
-        const { data, error: authError } = await supabase.auth.signUp({
+        // INSERT: admin creates user — no session change, no confirmation email
+        const { error: authError } = await supabaseAdmin.auth.admin.createUser({
           email,
-          password,   // ← user's actual password now
-          options: {
-            data: {
-              full_name,
-              username,
-            },
-          },
+          password,
+          email_confirm: true,
+          user_metadata: { full_name, username },
         });
 
         if (authError) throw authError;
-
-        // If session is null here, email confirmation is still ON
-        // Check your Supabase dashboard or config.toml
-        if (!data.session) {
-          Alert.alert(
-            "Check your email",
-            "A confirmation link was sent. Disable email confirmation in Supabase if you don't want this."
-          );
-        }
       }
 
       setModalVisible(false);
@@ -224,15 +223,16 @@ export default function AdminPanel() {
 
   // admin panel page structure
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
-      <ScrollView 
+    <SlideScreen index={2}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6200ee" />}
       >
         <View style={styles.headerActionRow}>
           <View>
             <Text style={styles.pageTitle}>{config.label}</Text>
-            <Text style={{ color: '#666' }}>{data.length} Total Records</Text>
+            <Text style={{ color: C.textMuted }}>{data.length} Total Records</Text>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => {setEditingId(null); setFormData({username:'', email:'', phone_number:'', full_name:'', password:'', confirmPassword:''}); setModalVisible(true)}}>
             <Text style={{ color: '#fff', fontWeight: 'bold' }}>+ New User</Text>
@@ -240,10 +240,10 @@ export default function AdminPanel() {
         </View>
 
         {/* Search Bar */}
-        <TextInput 
-          style={[styles.input, { marginBottom: 20 }]} 
-          placeholder="Search by name or email..." 
-          placeholderTextColor="#555"
+        <TextInput
+          style={[styles.input, { marginBottom: 20 }]}
+          placeholder="Search by name or email..."
+          placeholderTextColor={C.textPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -309,39 +309,49 @@ export default function AdminPanel() {
 
       {/* Reusable Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.content}>
-            <Text style={modalStyles.title}>{editingId ? 'Update Record' : 'Create Record'}</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{editingId ? 'Update Record' : 'Create Record'}</Text>
              <TextInput 
                style={styles.input} 
                placeholder="Full Name" 
                value={formData.full_name} 
                onChangeText={t => setFormData({...formData, full_name: t})} 
-               placeholderTextColor="#666" 
+               placeholderTextColor={C.textPlaceholder}
             />
             <TextInput 
                style={styles.input} 
                placeholder="Username" 
                value={formData.username} 
                onChangeText={t => setFormData({...formData, username: t})} 
-               placeholderTextColor="#666" 
+               placeholderTextColor={C.textPlaceholder}
             />
             <TextInput 
                style={styles.input} 
                placeholder="Email" 
                value={formData.email} 
                onChangeText={t => setFormData({...formData, email: t})} 
-               placeholderTextColor="#666" 
+               placeholderTextColor={C.textPlaceholder}
                keyboardType="email-address"
             />
-             <TextInput 
-               style={styles.input} 
-               placeholder="Phone Number" 
-               value={formData.phone_number} 
-               onChangeText={t => setFormData({...formData, phone_number: t})} 
-               placeholderTextColor="#666" 
-               keyboardType="numeric"
-            />
+            {!editingId && <>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={formData.password}
+                onChangeText={t => setFormData({...formData, password: t})}
+                placeholderTextColor={C.textPlaceholder}
+                secureTextEntry
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChangeText={t => setFormData({...formData, confirmPassword: t})}
+                placeholderTextColor={C.textPlaceholder}
+                secureTextEntry
+              />
+            </>}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={{ padding: 10, marginRight: 15 }}>
                 <Text style={{ color: '#aaa' }}>Cancel</Text>
@@ -354,39 +364,7 @@ export default function AdminPanel() {
         </View>
       </Modal>
     </SafeAreaView>
+    </SlideScreen>
   );
 }
 
-// some minor chart configuration
-const chartConfig = {
-  backgroundGradientFrom: "#16161d",
-  backgroundGradientTo: "#1f1f27",
-  color: (opacity = 1) => `rgba(98, 0, 238, ${opacity})`,
-  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-  propsForDots: { r: "4", strokeWidth: "2", stroke: "#6200ee" }
-};
-
-// simple modal styles
-const modalStyles = StyleSheet.create({
-  overlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.85)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  content: { 
-    backgroundColor: '#16161d', 
-    padding: 25, 
-    borderRadius: 20, 
-    width: '90%', 
-    maxWidth: 400, 
-    borderWidth: 1, 
-    borderColor: '#333' 
-  },
-  title: { 
-    color: '#fff', 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    marginBottom: 20 
-  }
-});
