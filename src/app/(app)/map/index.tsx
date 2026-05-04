@@ -47,6 +47,9 @@ export default function Map() {
   const [joinedModalVisible, setJoinedModalVisible] = useState(false);
   const [joinedFriend, setJoinedFriend] = useState<any | null>(null);
 
+  //Blocked
+  const [blockedIds, setBlockedIds] = useState<number[]>([]);
+
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
     if (!selectedFriend) return '';
@@ -222,13 +225,8 @@ export default function Map() {
 
       setFriendCounts(counts);
 
-      // 6. Hide users who are already friends or already requested
-      const visibleUsers = filteredUsers.filter((user) => {
-        const userId = Number(user.id);
-        return (!existingFriendIds.map(Number).includes(userId));
-      });
-
-      setSearchResults(visibleUsers);
+      setSearchResults(filteredUsers);
+      
     } catch (error) {
         console.log('search users error:', error);
         setSearchResults([]);
@@ -343,6 +341,9 @@ export default function Map() {
   }
 
   async function handleBlockUsers(targetUserId: number) {
+  
+  if (!currentUserId) return;
+
     try {
 
       const { error } = await supabase
@@ -358,11 +359,37 @@ export default function Map() {
         return;
       }
 
-      console.log('User BLOCKED !');
-    } catch (error) {
-        console.log('block user error:', error);
-    }
+    setBlockedIds((prev) => [...prev, targetUserId]);
+    console.log('User BLOCKED!');
+  } catch (error) {
+    console.log('block user error:', error);
   }
+}
+
+
+  async function handleUnblockUser(targetUserId: number) {
+
+  if (!currentUserId) return;
+
+    try {
+
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', currentUserId)
+        .eq('blocked_id', targetUserId);
+
+      if (error) {
+        console.log('unblock user error:', error);
+        return;
+      }
+
+    setBlockedIds((prev) => prev.filter((id) => id !== targetUserId));
+    console.log('User UNBLOCKED!');
+  } catch (error) {
+    console.log('unblock user error:', error);
+  }
+}
 
   // MODAL FUNCTIONS
   function closeSearchModal() {
@@ -604,31 +631,47 @@ export default function Map() {
                             ? `Friends with you • ${count} ${count === 1 ? 'friend' : 'friends'}`
                             : `${count} ${count === 1 ? 'friend' : 'friends'}`}
                         </Text>
-                      </View>
-
-                      {!isFriend && (
-                        <TouchableOpacity
-                          style={[
-                            styles.addButton,
-                            isRequested && styles.requestedButton,
-                          ]}
-                          onPress={() => {
-                            if (isRequested) {
-                              handleCancelRequest(itemId);
-                            } else {
-                              handleAddFriend(itemId);
-                            }
-                          }}
-                        >
-                          <Text style={styles.addButtonText}>
-                            {isRequested ? 'Requested' : 'Add Friend'}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
                     </View>
-                  );
-                }}
-              />
+
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.addButton,
+                    (isRequested || isFriend) && styles.requestedButton,
+                  ]}
+                  onPress={() => {
+                    if (isFriend) {
+                      handleUnfollow(itemId);
+                    } else if (isRequested) {
+                      handleCancelRequest(itemId);
+                    } else {
+                      handleAddFriend(itemId);
+                    }
+                  }}
+                >
+                  <Text style={styles.addButtonText}>
+                    {isFriend ? 'Unfollow' : isRequested ? 'Requested' : 'Add Friend'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() =>
+                    blockedIds.includes(itemId)
+                      ? handleUnblockUser(itemId)
+                      : handleBlockUsers(itemId)
+                  }
+                >
+                  <Text style={styles.addButtonText}>
+                    {blockedIds.includes(itemId) ? 'Unblock' : 'Block'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+              );
+              }}
+            />
             </View>
           </View>
         </Modal>
