@@ -18,6 +18,7 @@ import {getIncomingFriendRequests,acceptFriendRequest,deleteFriendRequest,} from
 import { useAppTheme } from '@/contexts/theme-context';
 import { darkMapStyle } from '@/constants/map-styles';
 import { SlideScreen } from '@/components/slide-screen';
+import FriendJoinedModal from '@/components/FriendJoinedModal';
 
 export default function Map() {
   const { colors: C, resolved } = useAppTheme();
@@ -43,6 +44,8 @@ export default function Map() {
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const hasNotifications = incomingRequests.length > 0;
+  const [joinedModalVisible, setJoinedModalVisible] = useState(false);
+  const [joinedFriend, setJoinedFriend] = useState<any | null>(null);
 
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
@@ -159,7 +162,7 @@ export default function Map() {
         console.log('friendship lookup error:', friendshipError);
       }
 
-      const existingFriendIds = friendshipData?.map((row) => (row.friend_id)) ?? []; 
+      const existingFriendIds = friendshipData?.map((row) => Number(row.friend_id)) ?? [];
       setFriendIds(existingFriendIds);
 
       // 4. Check which searched users already have pending request from current user
@@ -199,8 +202,14 @@ export default function Map() {
       });
 
       setFriendCounts(counts);
-      // 6. Show searched users
-      setSearchResults(filteredUsers);
+
+      // 6. Hide users who are already friends or already requested
+      const visibleUsers = filteredUsers.filter((user) => {
+        const userId = Number(user.id);
+        return (!existingFriendIds.map(Number).includes(userId));
+      });
+
+      setSearchResults(visibleUsers);
     } catch (error) {
         console.log('search users error:', error);
         setSearchResults([]);
@@ -247,11 +256,31 @@ export default function Map() {
   }
   async function handleAcceptRequest(requestId: number, senderId: number) {
     if (!currentUserId) return;
+
     try {
+      const acceptedRequest = incomingRequests.find((request) => Number(request.id) === Number(requestId));
+      console.log('Accepted request found:', acceptedRequest);
+
       await acceptFriendRequest(requestId, currentUserId, senderId);
-      setIncomingRequests((prev) => prev.filter((request) => request.id !== requestId));
-    } 
-    catch (error) {
+
+      setFriendIds((prev) => prev.includes(senderId) ? prev : [...prev, senderId]);
+      setRequestedIds((prev) => prev.filter((id) => id !== senderId));
+      setIncomingRequests((prev) => prev.filter((request) => Number(request.id) !== Number(requestId)));
+
+      setNotificationVisible(false);
+
+      // Show joined modal after the first modal closes
+      if (acceptedRequest) {
+        setJoinedFriend({
+          ...acceptedRequest,
+          accepted_at: new Date().toISOString(),
+        });
+
+        setTimeout(() => {
+          setJoinedModalVisible(true);
+        }, 250);
+      }
+    } catch (error) {
       console.log('accept friend request error:', error);
     }
   }
@@ -597,6 +626,14 @@ export default function Map() {
           requests={incomingRequests}
           onAccept={handleAcceptRequest}
           onDelete={handleDeleteRequest}
+        />
+        <FriendJoinedModal
+          visible={joinedModalVisible}
+          friend={joinedFriend}
+          onClose={() => {
+            setJoinedModalVisible(false);
+            setJoinedFriend(null);
+          }}
         />
 
         {selectedFriend && (

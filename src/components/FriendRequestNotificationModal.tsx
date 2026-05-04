@@ -39,60 +39,57 @@ export default function FriendRequestNotificationModal({visible,onClose,requests
             <Text style={styles.emptyText}>No notifications right now</Text>
           ) : (
             <FlatList
-                data={requests}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => {
-                    const user = item.users;
-                    const fullName = user?.full_name || user?.username || 'Unknown User';
-                    const username = user?.username || 'unknown';
-                    const initials = getInitials(user?.full_name, user?.username);
+              data={requests}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => {
+                const user = item.users;
+                const fullName = user?.full_name || user?.username || 'Unknown User';
+                const username = user?.username || 'unknown';
+                const initials = getInitials(user?.full_name, user?.username);
 
-                    return (
-                    <View style={styles.requestPage}>
-                        <Text style={styles.fullName}>{fullName}</Text>
-                        <Text style={styles.username}>@{username}</Text>
+                return (
+                  <View style={styles.requestPage}>
+                    <Text style={styles.fullName}>{fullName}</Text>
+                    <Text style={styles.username}>@{username}</Text>
 
-                        {user?.avatar_url ? (
-                        <Image
-                            source={{ uri: user.avatar_url }}
-                            style={styles.avatar}
-                        />
-                        ) : (
-                        <View style={styles.initialAvatar}>
-                            <Text style={styles.initialText}>{initials}</Text>
-                        </View>
-                        )}
+                    {user?.avatar_url ? (
+                      <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+                    ) : (
+                      <View style={styles.initialAvatar}>
+                        <Text style={styles.initialText}>{initials}</Text>
+                      </View>
+                    )}
 
-                        <Text style={styles.friendCount}>0 friends on Zono</Text>
+                    <Text style={styles.friendCount}>0 friends on Zono</Text>
 
-                        <Text style={styles.message}>
-                        wants to be your friend
-                        </Text>
+                    <Text style={styles.message}>
+                      wants to be your friend
+                    </Text>
 
-                        <View style={styles.buttonRow}>
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => onAccept(item.id, user.id)}
-                        >
-                            <Text style={styles.addButtonText}>+ Add</Text>
-                        </TouchableOpacity>
+                    <View style={styles.buttonRow}>
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => onAccept(item.id, user.id)}
+                      >
+                        <Text style={styles.addButtonText}>+ Add</Text>
+                      </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.deleteButton}
-                            onPress={() => onDelete(item.id)}
-                        >
-                            <Text style={styles.deleteButtonText}>Delete</Text>
-                        </TouchableOpacity>
-                        </View>
-
-                        <Text style={styles.contactText}>not in your contacts</Text>
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => onDelete(item.id)}
+                      >
+                        <Text style={styles.deleteButtonText}>Delete</Text>
+                      </TouchableOpacity>
                     </View>
-                    );
-                }}
-                />
+
+                    <Text style={styles.contactText}>not in your contacts</Text>
+                  </View>
+                );
+              }}
+            />
           )}
         </View>
       </View>

@@ -93,41 +93,6 @@ export async function updateFriendRequestStatus(
     return data;
 }
 
-export async function acceptFriendRequest(requestId: number): Promise<FriendRequestRow | null> {
-  const { data: requestRow, error: fetchError } = await supabase // data,error - property name from Supabase response
-    .from('friend_requests') 
-    .select('*')
-    .eq('id', requestId)
-    .single();
-
-    if (fetchError) {
-        console.log('acceptFriendRequest fetch error:', fetchError);
-        throw fetchError;
-    }
-
-    if (!requestRow) {
-        throw new Error('Friend request not found');
-    }
-
-    const acceptedRequest = await updateFriendRequestStatus(requestId, 'accepted');
-
-    const { error: insertError } = await supabase.from('friendships').insert([
-        {
-        user_id: requestRow.sender_id,
-        friend_id: requestRow.receiver_id,
-        },
-        {
-        user_id: requestRow.receiver_id,
-        friend_id: requestRow.sender_id,
-        },
-    ]);
-
-    if (insertError) {
-        console.log('acceptFriendRequest insert friendship error:', insertError);
-        throw insertError;
-    }
-    return acceptedRequest;
-}
 
 export async function rejectFriendRequest(requestId: number): Promise<FriendRequestRow|null> {
     return updateFriendRequestStatus(requestId,'rejected');

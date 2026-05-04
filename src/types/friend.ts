@@ -30,6 +30,7 @@ export type FriendshipRow = {
     created_at?: string | null;
     user_id: number;
     friend_id: number;
+    status?: FriendRequestStatus | null;
 };
 
 //shorter vesion user information
