@@ -67,35 +67,29 @@ export default function AdminPanel() {
   };
 
   // confirm deletion pop-up logic
-  const confirmDelete = (id: string) => {
+  const confirmDelete = (id: string, uid: string) => {
     Alert.alert(
-      "Confirm Delete", 
-      "Are you sure you want to remove this user? This action cannot be undone.", 
+      "Confirm Delete",
+      "Are you sure you want to remove this user? This action cannot be undone.",
       [
-        { 
-          text: "Cancel", 
-          style: "cancel" 
+        {
+          text: "Cancel",
+          style: "cancel"
         },
-        { 
-          text: "Delete", 
-          style: 'destructive', 
+        {
+          text: "Delete",
+          style: 'destructive',
           onPress: async () => {
             try {
-              setLoading(true); // Show spinner while deleting
-              
-              // We use the service function from your db-react-logic
-              await deleteRow(config.table, id);
-              
-              // Refresh the table so the user disappears immediately
+              setLoading(true);
+              await deleteRow(config.table, id, uid);
               await loadData();
-              
-              console.log(`Successfully deleted user: ${id}`);
             } catch (e: any) {
               Alert.alert("Delete Failed", e.message);
             } finally {
               setLoading(false);
             }
-          } 
+          }
         }
       ]
     );
@@ -153,10 +147,9 @@ export default function AdminPanel() {
 
     try {
       if (editingId) {
-        // UPDATE: standard table update (no auth changes)
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from(config.table)
-          .update({ username, email, phone_number, full_name })
+          .update({ username, email, phone_number: phone_number || null, full_name })
           .eq('id', editingId);
         if (error) throw error;
 
@@ -296,7 +289,7 @@ export default function AdminPanel() {
                     }}>                      
                     <Text style={styles.editBtn}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => confirmDelete(item.id)}>
+                    <TouchableOpacity onPress={() => confirmDelete(item.id, item.uid)}>
                       <Text style={styles.deleteBtn}>Del</Text>
                     </TouchableOpacity>
                   </View>

@@ -1,5 +1,5 @@
 // db-service.ts
-import { supabase } from '@/components/supabase';
+import { supabase, supabaseAdmin } from '@/components/supabase';
 
 // basic configuration to specify which attributes to display in the admin panel
 export const DATABASE_CONFIG = {
@@ -42,7 +42,9 @@ export const upsertRow = async (tableName: string, payload: any, id?: string) =>
 };
 
 // logic for deleting a row from the SupaBase db
-export const deleteRow = async (tableName: string, id: string) => {
-  const { error } = await supabase.from(tableName).delete().eq('id', id);
+export const deleteRow = async (tableName: string, id: string, uid: string) => {
+  const { error } = await supabaseAdmin.from(tableName).delete().eq('id', id);
   if (error) throw error;
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(uid);
+  if (authError) throw authError;
 };

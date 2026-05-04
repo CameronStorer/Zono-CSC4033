@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { makeStyles } from '@/app/(app)/settings/_style';
-import { supabase } from '@/components/supabase';
+import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAuth } from '@/components/auth-context';
 import { useAppTheme, ThemePreference } from '@/contexts/theme-context';
 import { SlideScreen } from '@/components/slide-screen';
@@ -71,6 +71,13 @@ function PasswordModal({
 }) {
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setNewPw('');
+      setConfirmPw('');
+    }
+  }, [visible]);
 
   const handleSave = () => {
     if (newPw.length < 8) { Alert.alert('Too short', 'Password must be at least 8 characters.'); return; }
@@ -165,9 +172,10 @@ export default function Settings() {
   };
 
   const handleSavePassword = async (password: string) => {
+    if (!user) return;
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password });
       if (error) throw error;
       setPasswordModal(false);
       Alert.alert('Done', 'Password updated successfully.');
