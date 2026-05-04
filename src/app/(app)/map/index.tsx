@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
 import { Image } from 'expo-image';
@@ -57,6 +57,25 @@ export default function Map() {
   // replace this with your real logged-in user id later if needed
   //const currentUserId = Number(currentUser.id ?? 1);
   const currentUserId = profile?.id;
+
+  // prevents user from being null by loading the profile before mount so last_lat and last_lon are written to
+  // keep a ref so the watchPositionAsync callback always sees the latest profile
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  // write coordinates as soon as the user is found and the location is known
+  useEffect(() => {
+    if (profile?.id && userLocation) {
+      updateUserLocation(
+        profile.id,
+        userLocation.coords.latitude,
+        userLocation.coords.longitude
+      );
+    }
+  }, [profile?.id]);
+
   useEffect(() => {
     if (currentUserId) {
       loadIncomingRequests();
@@ -356,9 +375,9 @@ export default function Map() {
         },
         (updatedLocation) => {
           setUserLocation(updatedLocation);
-          if (profile?.id) {
+          if (profileRef.current?.id) {
             updateUserLocation(
-              profile.id,
+              profileRef.current.id,
               updatedLocation.coords.latitude,
               updatedLocation.coords.longitude
             );
