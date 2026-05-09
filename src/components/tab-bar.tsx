@@ -1,14 +1,22 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { useAuth } from '@/components/auth-context';
+import { Map, MessageCircle, Sparkles, Settings, Database } from 'lucide-react-native';
 
-const TAB_CONFIG: Record<string, { label: string; icon: any }> = {
-  'map/index':         { label: 'Map',      icon: require('@/assets/images/map-icon.png') },
-  'settings/index':    { label: 'Settings', icon: require('@/assets/images/settings-icon.png') },
-  'admin-panel/index': { label: 'Admin',    icon: require('@/assets/images/database-icon.png') },
+type TabConfig = {
+  label: string;
+  Icon: React.ComponentType<{ color: string; size: number; strokeWidth?: number }>;
+};
+
+const TAB_CONFIG: Record<string, TabConfig> = {
+  'map/index':         { label: 'Map',      Icon: Map },
+  'messages/index':    { label: 'Messages', Icon: MessageCircle },
+  'ai-chat/index':     { label: 'AI Chat',  Icon: Sparkles },
+  'settings/index':    { label: 'Settings', Icon: Settings },
+  'admin-panel/index': { label: 'Admin',    Icon: Database },
 };
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
@@ -26,7 +34,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       <View style={[styles.bar, { backgroundColor: C.bgElement }]}>
         {visibleRoutes.map(route => {
           const isFocused = state.routes[state.index].name === route.name;
-          const config = TAB_CONFIG[route.name];
+          const { Icon } = TAB_CONFIG[route.name];
 
           const onPress = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -42,9 +50,10 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
               style={({ pressed }) => [styles.tab, pressed && { opacity: 0.6 }]}
             >
               <View style={[styles.iconPill, isFocused && { backgroundColor: C.accentBg }]}>
-                <Image
-                  source={config.icon}
-                  style={[styles.icon, { tintColor: isFocused ? C.accent : C.textMuted }]}
+                <Icon
+                  color={isFocused ? C.accent : C.textMuted}
+                  size={24}
+                  strokeWidth={isFocused ? 2.2 : 1.8}
                 />
               </View>
             </Pressable>
@@ -86,10 +95,5 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    width: 26,
-    height: 26,
-    resizeMode: 'contain',
   },
 });

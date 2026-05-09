@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, Pressable, Modal, TextInput,
-  Alert, ActivityIndicator,
+  Alert, ActivityIndicator, FlatList,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -132,6 +132,12 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
 ];
 
+type BlockedUser = {
+  id: number;
+  username: string;
+  full_name: string;
+};
+
 export default function Settings() {
   const { preference, setPreference, colors: C, resolved } = useAppTheme();
   const { profile, user, role, signOut, refreshProfile } = useAuth();
@@ -143,6 +149,53 @@ export default function Settings() {
   const [passwordModal, setPasswordModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const [blockedModal, setBlockedModal] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [unblockingId, setUnblockingId] = useState<number | null>(null);
+
+  const loadBlockedUsers = useCallback(async () => {
+    if (!profile?.id) return;
+    setLoadingBlocked(true);
+    try {
+      const { data: rows, error: bErr } = await supabase
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', profile.id);
+      if (bErr) throw bErr;
+      const ids = (rows ?? []).map((r: any) => r.blocked_id);
+      if (ids.length === 0) { setBlockedUsers([]); return; }
+      const { data: users, error: uErr } = await supabase
+        .from('users')
+        .select('id, username, full_name')
+        .in('id', ids);
+      if (uErr) throw uErr;
+      setBlockedUsers(users ?? []);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setLoadingBlocked(false);
+    }
+  }, [profile?.id]);
+
+  const handleUnblock = async (targetId: number) => {
+    if (!profile?.id) return;
+    setUnblockingId(targetId);
+    try {
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', profile.id)
+        .eq('blocked_id', targetId);
+      if (error) throw error;
+      setBlockedUsers(prev => prev.filter(u => u.id !== targetId));
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setUnblockingId(null);
+    }
+  };
 
   const initials = profile?.full_name
     ?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
@@ -223,7 +276,7 @@ export default function Settings() {
   };
 
   return (
-    <SlideScreen index={1}>
+    <SlideScreen index={3}>
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.pageTitle}>Settings</Text>
@@ -301,6 +354,20 @@ export default function Settings() {
           </View>
         </View>
 
+        {/* Privacy */}
+        <Text style={styles.sectionLabel}>Privacy</Text>
+        <View style={styles.sectionCard}>
+          <Pressable
+            onPress={() => { setBlockedModal(true); loadBlockedUsers(); }}
+            style={({ pressed }) => [styles.settingsRow, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.settingsRowLabel}>Blocked Users</Text>
+            <View style={styles.settingsRowRight}>
+              <Text style={styles.settingsRowChevron}>›</Text>
+            </View>
+          </Pressable>
+        </View>
+
         {/* Sign Out */}
         <Pressable
           onPress={signOut}
@@ -319,6 +386,57 @@ export default function Settings() {
         visible={passwordModal} onCancel={() => { setPasswordModal(false); setSaving(false); }}
         onSave={handleSavePassword} saving={saving} styles={styles}
       />
+
+      {/* Blocked Users Modal */}
+      <Modal visible={blockedModal} transparent animationType="slide" onRequestClose={() => setBlockedModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setBlockedModal(false)}>
+          <Pressable style={[styles.blockedModalContent]} onPress={() => {}}>
+            <View style={styles.blockedModalHeader}>
+              <Text style={styles.modalTitle}>Blocked Users</Text>
+              <Pressable onPress={() => setBlockedModal(false)} hitSlop={8}>
+                <Text style={{ color: C.accent, fontSize: 16, fontWeight: '500' }}>Done</Text>
+              </Pressable>
+            </View>
+            {loadingBlocked ? (
+              <ActivityIndicator color={C.accent} style={{ paddingVertical: 40 }} />
+            ) : blockedUsers.length === 0 ? (
+              <View style={styles.blockedEmptyState}>
+                <Text style={styles.blockedEmptyText}>You haven't blocked anyone.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={blockedUsers}
+                keyExtractor={u => String(u.id)}
+                style={{ maxHeight: 420 }}
+                renderItem={({ item }) => (
+                  <View style={styles.blockedRow}>
+                    <View style={styles.blockedAvatar}>
+                      <Text style={styles.blockedAvatarText}>
+                        {item.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.blockedName}>{item.full_name}</Text>
+                      <Text style={styles.blockedUsername}>@{item.username}</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => handleUnblock(item.id)}
+                      disabled={unblockingId === item.id}
+                      style={({ pressed }) => [styles.unblockBtn, (pressed || unblockingId === item.id) && { opacity: 0.6 }]}
+                    >
+                      {unblockingId === item.id
+                        ? <ActivityIndicator color={C.accent} size="small" />
+                        : <Text style={styles.unblockBtnText}>Unblock</Text>
+                      }
+                    </Pressable>
+                  </View>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.rowDivider} />}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
     </SlideScreen>
   );

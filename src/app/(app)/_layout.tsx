@@ -10,6 +10,8 @@ export default function AppLayout() {
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="map/index" />
+        <Tabs.Screen name="messages/index" />
+        <Tabs.Screen name="ai-chat/index" />
         <Tabs.Screen name="settings/index" />
         <Tabs.Screen name="admin-panel/index" />
       </Tabs>
