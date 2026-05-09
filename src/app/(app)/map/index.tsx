@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { currentUser, friends, UserLocation } from '@/data/mockLocations';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest, cancelFriendRequest} from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
@@ -20,12 +19,21 @@ import { darkMapStyle } from '@/constants/map-styles';
 import { SlideScreen } from '@/components/slide-screen';
 import FriendJoinedModal from '@/components/FriendJoinedModal';
 
+type MapFriend = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  avatarUrl: string | null;
+  initials: string;
+};
+
 export default function Map() {
   const { colors: C, resolved } = useAppTheme();
   const styles = useMemo(() => makeStyles(C), [resolved]);
 
   // the current selected friend, then use the function, base on select state
-  const [selectedFriend, setSelectedFriend] = useState< UserLocation| null>(null); // null default
+  const [selectedFriend, setSelectedFriend] = useState<MapFriend | null>(null);
   const [selectedPlaceName, setSelectedPlaceName] = useState<string>('Loading location...');
 
   // add friend modal states
@@ -37,6 +45,8 @@ export default function Map() {
 
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [mapFriends, setMapFriends] = useState<MapFriend[]>([]);
+  const mapRef = useRef<MapView>(null);
   const [friendIds, setFriendIds] = useState<number[]>([]); // tia: keeps track of who is already your friend
   const [friendCounts, setFriendCounts] = useState<Record<number, number>>({}); // store user friend count
 
@@ -87,11 +97,51 @@ export default function Map() {
       loadIncomingRequests();
     }
   }, [currentUserId]);
+
+  // Fetches the latest lat/lng + avatar for every friend and updates map markers.
+  // Called on mount and every 10 s from the watchPositionAsync callback.
+  async function loadFriendsForMap(userId: string) {
+    try {
+      const { data: rows } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', userId);
+      const ids = (rows ?? []).map((r: any) => r.friend_id);
+      if (!ids.length) { setMapFriends([]); return; }
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, full_name, username, last_lat, last_lng, avatar_url')
+        .in('id', ids);
+      const located: MapFriend[] = (users ?? [])
+        .filter((u: any) => u.last_lat != null && u.last_lng != null)
+        .map((u: any) => {
+          const displayName: string = u.full_name || u.username || 'Unknown';
+          return {
+            id: String(u.id),
+            name: displayName,
+            latitude: u.last_lat as number,
+            longitude: u.last_lng as number,
+            avatarUrl: u.avatar_url ?? null,
+            initials: displayName
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2),
+          };
+        });
+      setMapFriends(located);
+    } catch { /* non-fatal */ }
+  }
+
+  useEffect(() => {
+    if (profile?.id) loadFriendsForMap(profile.id);
+  }, [profile?.id]);
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
 
   // function get the name of place, async- get data from server
-  async function handleFriendPress(friend: UserLocation){
+  async function handleFriendPress(friend: MapFriend) {
     setSelectedFriend(friend);
     setSelectedPlaceName('Loading Location...');
     try {
@@ -413,13 +463,9 @@ export default function Map() {
 
       setPermissionGranted(true);
 
-      // prevents map buffering after granting user permissions
-      const lastKnownLocation = await Location.getLastKnownPositionAsync();
-      if (lastKnownLocation) {
-        setUserLocation(lastKnownLocation);
-      }
-
-      const currentLocation = await Location.getCurrentPositionAsync();
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
       setUserLocation(currentLocation);
 
       subscription = await Location.watchPositionAsync(
@@ -437,6 +483,8 @@ export default function Map() {
               updatedLocation.coords.latitude,
               updatedLocation.coords.longitude
             );
+            // Pull fresh friend positions on the same 10-second cadence
+            loadFriendsForMap(profileRef.current.id);
           }
         }
       );
@@ -479,6 +527,7 @@ export default function Map() {
     <SlideScreen index={0}>
       <View style={styles.container}>
         <MapView
+          ref={mapRef}
           style={styles.map}
           userInterfaceStyle={resolved}
           customMapStyle={resolved === 'dark' ? darkMapStyle : []}
@@ -499,28 +548,15 @@ export default function Map() {
             initials={initials}
           />
 
-          {friends.map((friend) => (
-            <Marker
+          {mapFriends.map((friend) => (
+            <UserMarker
               key={friend.id}
-              coordinate={{
-                latitude: friend.latitude,
-                longitude: friend.longitude,
-              }}
+              coordinate={{ latitude: friend.latitude, longitude: friend.longitude }}
+              avatarUrl={friend.avatarUrl}
+              initials={friend.initials}
+              borderColor={C.accent}
               onPress={() => handleFriendPress(friend)}
-            >
-              <Callout>
-                <View style={styles.calloutBox}>
-                  <Text style={styles.calloutTitle}>{friend.name}</Text>
-                  <Text>Friend</Text>
-                  <Text>
-                    Location: {friend.latitude.toFixed(4)}, {friend.longitude.toFixed(4)}
-                  </Text>
-                  <Text>
-                    Distance: {distanceText || formatDistance(getDistanceMeters(currentUser, friend))}
-                  </Text>
-                </View>
-              </Callout>
-            </Marker>
+            />
           ))}
           {/* draw the line between 2 users for illustrate the distance  */}
           {selectedFriend && (
@@ -564,7 +600,7 @@ export default function Map() {
           <Text style={styles.circleButtonText}>+</Text>
         </TouchableOpacity>
 
-        {/* notification bell UI only for now */}
+        {/* notification bell */}
         <TouchableOpacity
           style={styles.bellCircle}
           onPress={() => {
@@ -573,10 +609,26 @@ export default function Map() {
           }}
         >
           <Text style={styles.circleButtonText}>🔔</Text>
-
           {hasNotifications && (
             <View style={styles.notificationDot} />
           )}
+        </TouchableOpacity>
+
+        {/* center on me */}
+        <TouchableOpacity
+          style={styles.locateCircle}
+          onPress={() => {
+            if (userLocation) {
+              mapRef.current?.animateToRegion({
+                latitude: userLocation.coords.latitude,
+                longitude: userLocation.coords.longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }, 500);
+            }
+          }}
+        >
+          <Text style={styles.circleButtonText}>◎</Text>
         </TouchableOpacity>
 
         {/* search modal */}
@@ -701,12 +753,8 @@ export default function Map() {
         {selectedFriend && (
           <View style={styles.bottomCard}>
             <Text style={styles.cardTitle}>{selectedFriend.name}</Text>
-            <Text>Type: Friend</Text>
-            <Text>
-              Location: {selectedFriend.latitude.toFixed(4)}, {selectedFriend.longitude.toFixed(4)}
-            </Text>
-            <Text>Hey, I’m at {selectedPlaceName} now !! </Text>
-            <Text>Distance: {distanceText}</Text>
+            <Text style={{ color: '#ffffff', marginBottom: 4 }}>📍 {selectedPlaceName}</Text>
+            <Text style={{ color: '#ffffff' }}>Distance: {distanceText}</Text>
           </View>
         )}
       </View>

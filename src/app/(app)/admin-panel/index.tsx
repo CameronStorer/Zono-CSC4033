@@ -216,7 +216,7 @@ export default function AdminPanel() {
 
   // admin panel page structure
   return (
-    <SlideScreen index={2}>
+    <SlideScreen index={4}>
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView
         contentContainerStyle={styles.container}

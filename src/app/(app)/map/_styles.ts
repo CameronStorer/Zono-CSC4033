@@ -123,5 +123,14 @@ export const makeStyles = (C: AppColors) => StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: 'red',
-  }
+  },
+  locateCircle: {
+    position: 'absolute',
+    top: 200, right: 20,
+    width: 54, height: 54,
+    borderRadius: 27,
+    backgroundColor: C.mapButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
