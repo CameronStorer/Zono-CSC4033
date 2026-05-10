@@ -25,10 +25,10 @@ export const DATABASE_CONFIG = {
     widths: { 
       id: 80, 
       created_at: 180, 
-      blocker_id: 80, 
-      blocked_id: 80,
+      blocker_id: 120, 
+      blocked_id: 120,
       report_reason: 140,
-      report_status: 80,
+      report_status: 140,
     } as Record<string, number>
   }
 };
