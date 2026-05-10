@@ -35,7 +35,7 @@ export const DATABASE_CONFIG = {
 
 // logic to select everything from a table in the SupaBase DB
 export const fetchTableData = async (tableName: string) => {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin // this is ok because only an admin can have access to this functionality anyways
     .from(tableName)
     .select('*')
     .order('created_at', { ascending: true });
