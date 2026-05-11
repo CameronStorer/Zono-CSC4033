@@ -100,7 +100,7 @@ export default function Map() {
 
   // Fetches the latest lat/lng + avatar for every friend and updates map markers.
   // Called on mount and every 10 s from the watchPositionAsync callback.
-  async function loadFriendsForMap(userId: string) {
+  async function loadFriendsForMap(userId: number) {
     try {
       const { data: rows } = await supabase
         .from('friendships')
@@ -134,9 +134,8 @@ export default function Map() {
     } catch { /* non-fatal */ }
   }
 
-  useEffect(() => {
-    if (profile?.id) loadFriendsForMap(profile.id);
-  }, [profile?.id]);
+  useEffect(() => {if (profile?.id) loadFriendsForMap(profile.id);}, [profile?.id]);
+
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
 
