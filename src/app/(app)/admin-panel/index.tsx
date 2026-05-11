@@ -10,6 +10,7 @@ import { makeStyles } from '@/app/(app)/admin-panel/_style';
 import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAppTheme } from '@/contexts/theme-context';
 import { SlideScreen } from '@/components/slide-screen';
+import Accordion from '@/components/accordion';
 
 // admin panel page
 export default function AdminPanel() {
@@ -270,51 +271,52 @@ export default function AdminPanel() {
             style={{ borderRadius: 12 }}
           />
         </View>
-
-        {/* Users Data Table */}
-        <View style={styles.tableCard}>
-          <ScrollView horizontal>
-            <View>
-              <View style={styles.colHeaderRow}>
-                {usersConfig.showColumns.map(col => (
-                  <Text key={col} style={[styles.headerCell, { width: usersConfig.widths[col] }]}>{col.toUpperCase()}</Text>
-                ))}
-                <Text style={[styles.headerCell, { width: 120 }]}>ACTIONS</Text>
-              </View>
-
-              {usersLoading && !refreshing ? (
-                <ActivityIndicator size="large" color="#6200ee" style={{ margin: 40 }} />
-              ) : filteredData.map(item => (
-                <View key={item.id} style={styles.dataRow}>
+        <Accordion title={`${usersConfig.label} (${usersData.length})`} defaultOpen={true}>
+          {/* Users Data Table */}
+          <View style={styles.tableCard}>
+            <ScrollView horizontal>
+              <View>
+                <View style={styles.colHeaderRow}>
                   {usersConfig.showColumns.map(col => (
-                    <Text key={col} style={[styles.dataCell, { width: usersConfig.widths[col] }]} numberOfLines={1}>
-                      {String(item[col] ?? '—')}
-                    </Text>
+                    <Text key={col} style={[styles.headerCell, { width: usersConfig.widths[col] }]}>{col.toUpperCase()}</Text>
                   ))}
-                  <View style={[styles.actionCell, { width: 120 }]}>
-                    <TouchableOpacity onPress={() => {
-                      setEditingId(item.id);
-                      setFormData({
-                        username: item.username,
-                        email: item.email,
-                        phone_number: item.phone_number ? String(item.phone_number) : '',
-                        full_name: item.full_name,
-                        password: '',
-                        confirmPassword: ''
-                      });
-                      setModalVisible(true);
-                    }}>
-                      <Text style={styles.editBtn}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => confirmDelete(item.id, item.uid)}>
-                      <Text style={styles.deleteBtn}>Del</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={[styles.headerCell, { width: 120 }]}>ACTIONS</Text>
                 </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
+
+                {usersLoading && !refreshing ? (
+                  <ActivityIndicator size="large" color="#6200ee" style={{ margin: 40 }} />
+                ) : filteredData.map(item => (
+                  <View key={item.id} style={styles.dataRow}>
+                    {usersConfig.showColumns.map(col => (
+                      <Text key={col} style={[styles.dataCell, { width: usersConfig.widths[col] }]} numberOfLines={1}>
+                        {String(item[col] ?? '—')}
+                      </Text>
+                    ))}
+                    <View style={[styles.actionCell, { width: 120 }]}>
+                      <TouchableOpacity onPress={() => {
+                        setEditingId(item.id);
+                        setFormData({
+                          username: item.username,
+                          email: item.email,
+                          phone_number: item.phone_number ? String(item.phone_number) : '',
+                          full_name: item.full_name,
+                          password: '',
+                          confirmPassword: ''
+                        });
+                        setModalVisible(true);
+                      }}>
+                        <Text style={styles.editBtn}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => confirmDelete(item.id, item.uid)}>
+                        <Text style={styles.deleteBtn}>Del</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </Accordion>
 
         {/* Reports Section Header */}
         <View style={[styles.headerActionRow, { marginTop: 30 }]}>
@@ -324,42 +326,43 @@ export default function AdminPanel() {
           </View>
         </View>
 
-        {/* Reports Data Table */}
-        <View style={styles.tableCard}>
-          <ScrollView horizontal>
-            <View>
-              <View style={styles.colHeaderRow}>
-                {reportsConfig.showColumns.map(col => (
-                  <Text key={col} style={[styles.headerCell, { width: reportsConfig.widths[col] ?? 120 }]}>
-                    {col.toUpperCase()}
-                  </Text>
-                ))}
-                <Text style={[styles.headerCell, { width: 160 }]}>ACTIONS</Text>
-              </View>
-
-              {reportsLoading && !refreshing ? (
-                <ActivityIndicator size="large" color="#6200ee" style={{ margin: 40 }} />
-              ) : reportsData.map(item => (
-                <View key={item.block_id} style={styles.dataRow}>
+        <Accordion title={`${reportsConfig.label} (${reportsData.length})`} defaultOpen={true}>
+          {/* Reports Data Table */}
+          <View style={styles.tableCard}>
+            <ScrollView horizontal>
+              <View>
+                <View style={styles.colHeaderRow}>
                   {reportsConfig.showColumns.map(col => (
-                    <Text key={col} style={[styles.dataCell, { width: reportsConfig.widths[col] ?? 120 }]} numberOfLines={1}>
-                      {String(item[col] ?? '—')}
+                    <Text key={col} style={[styles.headerCell, { width: reportsConfig.widths[col] ?? 120 }]}>
+                      {col.toUpperCase()}
                     </Text>
                   ))}
-                  <View style={[styles.actionCell, { width: 160 }]}>
-                    <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'resolved')}>
-                      <Text style={styles.editBtn}>Resolve</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'dismissed')}>
-                      <Text style={styles.deleteBtn}>Dismiss</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={[styles.headerCell, { width: 160 }]}>ACTIONS</Text>
                 </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
 
+                {reportsLoading && !refreshing ? (
+                  <ActivityIndicator size="large" color="#6200ee" style={{ margin: 40 }} />
+                ) : reportsData.map(item => (
+                  <View key={item.block_id} style={styles.dataRow}>
+                    {reportsConfig.showColumns.map(col => (
+                      <Text key={col} style={[styles.dataCell, { width: reportsConfig.widths[col] ?? 120 }]} numberOfLines={1}>
+                        {String(item[col] ?? '—')}
+                      </Text>
+                    ))}
+                    <View style={[styles.actionCell, { width: 160 }]}>
+                      <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'resolved')}>
+                        <Text style={styles.editBtn}>Resolve</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'dismissed')}>
+                        <Text style={styles.deleteBtn}>Dismiss</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </Accordion>
       </ScrollView>
 
       {/* Reusable Modal */}
