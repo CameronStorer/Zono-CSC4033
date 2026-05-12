@@ -5,8 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
-import { DATABASE_CONFIG, fetchTableData, deleteRow } from '@/app/(app)/admin-panel/_logic';
-import { makeStyles } from '@/app/(app)/admin-panel/_style';
+import { DATABASE_CONFIG, fetchTableData, deleteRow } from './_logic';
+import { makeStyles } from './_style';
 import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAppTheme } from '@/contexts/theme-context';
 import { SlideScreen } from '@/components/slide-screen';

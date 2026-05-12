@@ -6,7 +6,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { makeStyles } from '@/app/(app)/settings/_style';
+import { makeStyles } from './_style';
 import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAuth } from '@/components/auth-context';
 import { useAppTheme, ThemePreference } from '@/contexts/theme-context';
