@@ -1,6 +1,13 @@
 import { supabase } from '@/components/supabase';
 import { UserProfile } from '@/services/profileService';
-import { getFriendList } from '@/services/friendService';
+import {cancelFriendRequest,getFriendList,sendFriendRequest,} from '@/services/friendService';
+
+export type FriendRelationshipStatus =
+  | 'self'
+  | 'friends'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'none';
 
 export type FriendProfilePreview = UserProfile & {
   friend_count: number;
@@ -26,7 +33,64 @@ export async function getUserProfileById(userId: number): Promise<UserProfile> {
   return data;
 }
 
-export async function getProfileFriendList(profileUserId: number, currentUserId: number): Promise<FriendProfilePreview[]> {
+export async function getRelationshipToUser(currentUserId: number,targetUserId: number): Promise<FriendRelationshipStatus> {
+  if (currentUserId === targetUserId) {
+    return 'self';
+  }
+
+  const currentUserFriends = await getFriendList(currentUserId);
+  const isFriend = currentUserFriends.some((friend) => Number(friend.id) === Number(targetUserId));
+
+  if (isFriend) {
+    return 'friends';
+  }
+
+  const { data: sentRequest, error: sentError } = await supabase
+    .from('friend_requests')
+    .select('id')
+    .eq('sender_id', currentUserId)
+    .eq('receiver_id', targetUserId)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (sentError) {
+    console.log('getRelationshipToUser sent request error:', sentError);
+    throw sentError;
+  }
+
+  if (sentRequest) {
+    return 'pending_sent';
+  }
+
+  const { data: receivedRequest, error: receivedError } = await supabase
+    .from('friend_requests')
+    .select('id')
+    .eq('sender_id', targetUserId)
+    .eq('receiver_id', currentUserId)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (receivedError) {
+    console.log('getRelationshipToUser received request error:', receivedError);
+    throw receivedError;
+  }
+
+  if (receivedRequest) {
+    return 'pending_received';
+  }
+
+  return 'none';
+}
+
+export async function sendProfileFriendRequest(currentUserId: number,targetUserId: number): Promise<void> {
+  await sendFriendRequest(currentUserId, targetUserId);
+}
+
+export async function unsendProfileFriendRequest(currentUserId: number,targetUserId: number): Promise<void> {
+  await cancelFriendRequest(currentUserId, targetUserId);
+}
+
+export async function getProfileFriendList(profileUserId: number,currentUserId: number): Promise<FriendProfilePreview[]> {
   const profileFriends = await getFriendList(profileUserId);
   const currentUserFriends = await getFriendList(currentUserId);
 
@@ -64,7 +128,9 @@ export async function getProfileFriendList(profileUserId: number, currentUserId:
 
     const thisFriendFriendIds = rowsForThisFriend.map((row) => Number(row.friend_id));
 
-    const mutualCount = thisFriendFriendIds.filter((id) => currentUserFriendSet.has(id)).length;
+    const mutualCount = thisFriendFriendIds.filter((id) =>
+      currentUserFriendSet.has(id)
+    ).length;
 
     return {
       ...friend,
@@ -75,13 +141,4 @@ export async function getProfileFriendList(profileUserId: number, currentUserId:
         Number(friend.id) === currentUserId,
     };
   });
-}
-
-export async function canViewProfile( currentUserId: number,targetUserId: number): Promise<boolean> {
-  if (currentUserId === targetUserId) {
-    return true;
-  }
-  const currentUserFriends = await getFriendList(currentUserId);
-
-  return currentUserFriends.some((friend) => Number(friend.id) === Number(targetUserId));
 }

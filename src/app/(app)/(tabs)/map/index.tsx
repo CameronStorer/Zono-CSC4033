@@ -1,13 +1,13 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest, cancelFriendRequest} from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
-import { makeStyles } from '@/app/(app)/map/_styles';
-import ProfileModal from '@/components/ProfileModal';
+import { makeStyles } from '@/app/(app)/(tabs)/map/_styles';
 import FriendRequestNotificationModal from '@/components/FriendRequestNotificationModal';
 import { updateUserLocation } from '@/services/profileService';
 import { supabase } from '@/components/supabase'; // tia
@@ -67,8 +67,7 @@ export default function Map() {
     return formatDistance(meters);
   }, [selectedFriend]); //recompute distance text when we have selected friend
 
-  //User Profile use to manipulate the pop-up modal
-  const [profileVisible, setProfileVisible] = useState(false);
+  // Current logged-in user profile
   const { profile } = useAuth();
   // replace this with your real logged-in user id later if needed
   //const currentUserId = Number(currentUser.id ?? 1);
@@ -134,8 +133,9 @@ export default function Map() {
     } catch { /* non-fatal */ }
   }
 
-  useEffect(() => {if (profile?.id) loadFriendsForMap(profile.id);}, [profile?.id]);
-
+  useEffect(() => {
+    if (profile?.id) loadFriendsForMap(profile.id);
+  }, [profile?.id]);
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
 
@@ -579,7 +579,7 @@ export default function Map() {
         {/* add profile button */}
         <TouchableOpacity
           style={styles.profileCircle}
-          onPress={() => setProfileVisible(true)}
+          onPress={() => router.push('/profile')}
           activeOpacity={0.8}
         >
           {profile?.avatar_url
@@ -726,12 +726,6 @@ export default function Map() {
             </View>
           </View>
         </Modal>
-
-        <ProfileModal
-          visible={profileVisible}
-          onClose={() => setProfileVisible(false)}
-          profile={profile}
-        />
 
         <FriendRequestNotificationModal
           visible={notificationVisible}

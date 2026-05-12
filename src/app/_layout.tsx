@@ -19,7 +19,7 @@ function RouteGuard() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const inApp = segmentsRef.current[0] === '(app)';
       if (event === 'SIGNED_IN' && session && !inApp) {
-        router.replace('/(app)/map');
+        router.replace('/(app)/(tabs)/map');
       } else if (event === 'SIGNED_OUT' && inApp) {
         router.replace('/(login)');
       }

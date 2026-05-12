@@ -328,10 +328,9 @@ export default function ProfileModal({ visible, onClose, profile }: ProfileModal
                     friend={friend}
                     styles={styles}
                     onPress={() => {
-                      onClose();
                       router.push({
-                        pathname: '/profile/[id]',
-                        params: { id: String(friend.id) },
+                          pathname: '/profile/[id]',
+                          params: { id: String(friend.id) },
                       });
                     }}
                   />
