@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   pageTitle: { 
     fontSize: 24, 
     fontWeight: 'bold', 
-    color: '#fff' 
+    color: '#fff',
   },
   addButton: { 
     backgroundColor: '#6200ee', 

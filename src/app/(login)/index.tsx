@@ -3,8 +3,11 @@ import { Alert, Text, View, StyleSheet, Platform, TextInput, Image, TouchableOpa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAppTheme } from '@/contexts/theme-context';
+import { AsyncSkia } from '@/components/async-skia';
+import { Suspense } from 'react';
 
 const EMPTY_FORM = { full_name: '', username: '', email: '', password: '', confirmPassword: '' };
+const Iridescence = React.lazy(() => import('@/components/iridescence'));
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -74,12 +77,32 @@ export default function Login() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.loginHeaderBg, paddingTop: Platform.OS === 'web' ? 80 : 0 }} edges={['top']}>
+    <SafeAreaView 
+      style={{ 
+        flex: 1, 
+        backgroundColor: C.loginHeaderBg, 
+        paddingTop: Platform.OS === 'web' ? 80 : 0 
+      }} 
+      edges={['top']}
+      >
+
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+      >
+        <Suspense fallback={<ActivityIndicator />}>
+          <AsyncSkia />
+          <Iridescence />
+        </Suspense>
+      </View>
+
       <View style={styles.screen}>
-        <View style={[styles.top, { backgroundColor: C.loginHeaderBg }]}>
           <Text style={styles.text}>Z O N O</Text>
-        </View>
-        <View style={[styles.bottom, { backgroundColor: C.loginAccentBg }]} />
         <View style={styles.centerLoginBox}>
           <View style={[styles.loginBox, { backgroundColor: C.loginBoxBg, shadowColor: C.loginBoxShadow }]}>
             <Text style={[styles.loginText, { color: C.loginTitleText }]}>Welcome to ZONO, Log In!</Text>
@@ -197,15 +220,14 @@ export default function Login() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   top: { flex: 0.08, justifyContent: "flex-start", alignItems: "center" },
-  bottom: { flex: 0.92 },
-  text: { fontSize: 50, fontWeight: "bold", fontFamily: "monospace", color: "#ffff" },
+  text: { fontSize: 50, fontWeight: "bold", fontFamily: "monospace", color: "#868686", textAlign: "center", margin: 100 },
   centerLoginBox: { position: "absolute", top: 50, right: 0, bottom: 0, left: 0, justifyContent: "center", alignItems: "center" },
   loginBox: {
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    width: 450,
-    height: 500,
+    width: 350,
+    height: 400,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
