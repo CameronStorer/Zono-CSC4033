@@ -1,6 +1,6 @@
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/components/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
+import { makeStyles } from './_style';
 import { UserProfile } from '@/services/profileService';
 import {
   FriendProfilePreview,
@@ -15,222 +15,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import {ActivityIndicator,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from 'react-native';
-
-const makeStyles = (C: AppColors) =>
-  StyleSheet.create({
-    overlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    },
-    panel: {
-      flex: 1,
-      marginTop: 90,
-      backgroundColor: C.profilePanelBg,
-      borderTopLeftRadius: 36,
-      borderTopRightRadius: 36,
-      paddingTop: 28,
-      paddingHorizontal: 24,
-      alignItems: 'center',
-    },
-    closeButton: {
-      position: 'absolute',
-      top: 20,
-      right: 20,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: C.bgElevated,
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
-    },
-    closeButtonText: {
-      color: C.text,
-      fontSize: 28,
-      fontWeight: '700',
-      lineHeight: 30,
-    },
-    scrollView: {
-      width: '100%',
-      flex: 1,
-    },
-    scrollContent: {
-      width: '100%',
-      alignItems: 'center',
-      paddingTop: 28,
-      paddingBottom: 50,
-    },
-    avatarCircle: {
-      width: 110,
-      height: 110,
-      borderRadius: 55,
-      backgroundColor: C.bgElement,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 4,
-      borderColor: C.bgElement,
-      overflow: 'hidden',
-    },
-    avatarImage: {
-      width: '100%',
-      height: '100%',
-    },
-    initialsText: {
-      color: '#fff',
-      fontSize: 34,
-      fontWeight: '900',
-    },
-    name: {
-      fontSize: 34,
-      fontWeight: '700',
-      marginTop: 12,
-      color: C.text,
-      textAlign: 'center',
-    },
-    username: {
-      fontSize: 20,
-      color: C.textSecondary,
-      marginBottom: 14,
-      textAlign: 'center',
-    },
-    profileActionButton: {
-      minWidth: 160,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 22,
-    },
-    profileActionText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '800',
-    },
-    requestedButton: {
-      minWidth: 160,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 22,
-      backgroundColor: C.bgElevated,
-    },
-    requestedText: {
-      color: C.text,
-      fontSize: 16,
-      fontWeight: '800',
-    },
-    infoCard: {
-      width: '100%',
-      backgroundColor: C.profileCardBg,
-      borderRadius: 24,
-      padding: 20,
-      marginBottom: 16,
-    },
-    cardTitle: {
-      fontSize: 22,
-      fontWeight: '700',
-      marginBottom: 8,
-      color: C.text,
-    },
-    cardText: {
-      fontSize: 16,
-      color: C.textSecondary,
-      marginBottom: 4,
-    },
-    friendCountText: {
-      width: '100%',
-      fontSize: 20,
-      fontWeight: '700',
-      color: C.textSecondary,
-      marginBottom: 14,
-      marginTop: 4,
-    },
-    friendCard: {
-      width: '100%',
-      backgroundColor: C.profileCardBg,
-      borderRadius: 28,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginBottom: 16,
-    },
-    friendRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-    },
-    friendAvatar: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
-      backgroundColor: C.bgElement,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      marginRight: 14,
-    },
-    friendInfo: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    friendName: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: C.text,
-    },
-    friendMeta: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: C.textSecondary,
-      marginTop: 2,
-    },
-    smallAddButton: {
-      minWidth: 76,
-      paddingVertical: 9,
-      paddingHorizontal: 12,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    smallAddText: {
-      color: '#fff',
-      fontSize: 14,
-      fontWeight: '800',
-    },
-    center: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: C.profilePanelBg,
-      padding: 24,
-    },
-    message: {
-      color: C.text,
-      fontSize: 18,
-      fontWeight: '700',
-      textAlign: 'center',
-      marginTop: 14,
-    },
-    requestedSmallButton: {
-      minWidth: 92,
-      paddingVertical: 9,
-      paddingHorizontal: 12,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: C.bgElevated,
-    },
-
-    requestedSmallText: {
-      color: C.text,
-      fontSize: 13,
-      fontWeight: '800',
-    },
-  });
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, } from 'react-native';
 
 function getInitials(name?: string | null, username?: string | null) {
   const value = name || username || '?';
@@ -371,7 +156,7 @@ export default function FriendProfilePage() {
     }
   }
 
-  useEffect(() => {loadProfilePage();}, [id, currentProfile?.id]);
+  useEffect(() => { loadProfilePage(); }, [id, currentProfile?.id]);
 
   async function handleProfileAction() {
     if (!currentProfile?.id || !profile?.id) {
@@ -396,26 +181,26 @@ export default function FriendProfilePage() {
   }
 
   async function handleAddFriendFromRow(targetUserId: number) {
-  if (!currentProfile?.id) {
-    return;
+    if (!currentProfile?.id) {
+      return;
+    }
+
+    try {
+      setRowActionLoadingId(targetUserId);
+
+      await sendProfileFriendRequest(Number(currentProfile.id), targetUserId);
+
+      setRequestedIds((prev) =>
+        prev.includes(targetUserId) ? prev : [...prev, targetUserId]
+      );
+    } catch (error) {
+      console.log('friend row add request error:', error);
+    } finally {
+      setRowActionLoadingId(null);
+    }
   }
 
-  try {
-    setRowActionLoadingId(targetUserId);
-
-    await sendProfileFriendRequest(Number(currentProfile.id), targetUserId);
-
-    setRequestedIds((prev) =>
-      prev.includes(targetUserId) ? prev : [...prev, targetUserId]
-    );
-  } catch (error) {
-    console.log('friend row add request error:', error);
-  } finally {
-    setRowActionLoadingId(null);
-  }
-}
-
-async function handleUnsendFriendFromRow(targetUserId: number) {
+  async function handleUnsendFriendFromRow(targetUserId: number) {
     if (!currentProfile?.id) {
       return;
     }
@@ -485,55 +270,55 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
     );
   }
 
-    function closeFriendProfile() {
-      if (router.canDismiss()) {
-        router.dismiss(1);
-        return;
-      }
-
-      if (router.canGoBack()) {
-        router.back();
-        return;
-      }
-      router.dismissTo('/map');
+  function closeFriendProfile() {
+    if (router.canDismiss()) {
+      router.dismiss(1);
+      return;
     }
 
-    return (
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.dismissTo('/map');
+  }
+
+  return (
     <View style={styles.overlay}>
-        <View style={styles.panel}>
+      <View style={styles.panel}>
         <TouchableOpacity style={styles.closeButton} onPress={closeFriendProfile}>
-            <Text style={styles.closeButtonText}>×</Text>
+          <Text style={styles.closeButtonText}>×</Text>
         </TouchableOpacity>
 
         {loading ? (
-            <View style={styles.center}>
+          <View style={styles.center}>
             <ActivityIndicator color={C.accent} size="large" />
             <Text style={styles.message}>Loading profile...</Text>
-            </View>
+          </View>
         ) : (
-            <ScrollView
+          <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            >
+          >
             <View style={styles.avatarCircle}>
-                {profile?.avatar_url ? (
+              {profile?.avatar_url ? (
                 <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                ) : (
+              ) : (
                 <View
-                    style={{
+                  style={{
                     width: '100%',
                     height: '100%',
                     backgroundColor: C.accent,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    }}
+                  }}
                 >
-                    <Text style={styles.initialsText}>
+                  <Text style={styles.initialsText}>
                     {getInitials(profile?.full_name, profile?.username)}
-                    </Text>
+                  </Text>
                 </View>
-                )}
+              )}
             </View>
 
             <Text style={styles.name}>{profile?.full_name || 'Unknown User'}</Text>
@@ -542,28 +327,28 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
             {renderProfileActionButton()}
 
             <View style={styles.infoCard}>
-                <Text style={styles.cardTitle}>Profile</Text>
-                <Text style={styles.cardText}>
+              <Text style={styles.cardTitle}>Profile</Text>
+              <Text style={styles.cardText}>
                 Status: {profile?.status || 'No status'}
-                </Text>
-                <Text style={styles.cardText}>
+              </Text>
+              <Text style={styles.cardText}>
                 Location sharing: {profile?.location_sharing || 'Unknown'}
-                </Text>
+              </Text>
             </View>
 
             <View style={styles.infoCard}>
-                <Text style={styles.cardTitle}>About</Text>
-                <Text style={styles.cardText}>
+              <Text style={styles.cardTitle}>About</Text>
+              <Text style={styles.cardText}>
                 Bio: {profile?.bio || 'No bio yet'}
-                </Text>
+              </Text>
             </View>
 
             <Text style={styles.friendCountText}>{friends.length} friends</Text>
 
             <View style={styles.friendCard}>
-                {friends.length === 0 ? (
+              {friends.length === 0 ? (
                 <Text style={styles.cardText}>No friends yet</Text>
-                ) : (
+              ) : (
                 friends.map((friend) => (
                   <FriendRow
                     key={friend.id}
@@ -575,11 +360,11 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
                     onUnsendRequest={handleUnsendFriendFromRow}
                   />
                 ))
-                )}
+              )}
             </View>
-            </ScrollView>
+          </ScrollView>
         )}
-        </View>
+      </View>
     </View>
-    );
+  );
 }
