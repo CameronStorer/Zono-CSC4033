@@ -1,26 +1,23 @@
-import { supabaseAdmin } from '@/components/supabase';
+import { supabase } from '@/components/supabase';
 
 export async function createReport(
-  blockerId: number,
-  blockedId: number,
+  reporterId: number,
+  reportedId: number,
   reason: string,
 ) {
-  const { data, error } = await supabaseAdmin
+  const { error } = await supabase
     .from('reports')
     .insert([
       {
-        blocker_id: blockerId,
-        blocked_id: blockedId,
+        created_at: new Date().toISOString(),
+        reporter_id: reporterId,
+        reported_id: reportedId,
         report_reason: reason,
         report_status: 'pending',
       },
-    ])
-    .select();
+    ]);
 
   if (error) {
-    console.log('createReport error:', JSON.stringify(error));
     throw error;
   }
-
-  return data;
 }
