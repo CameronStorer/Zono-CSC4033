@@ -15,7 +15,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import {ActivityIndicator,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from 'react-native';
+import {ActivityIndicator,Alert,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from 'react-native';
+
 
 const makeStyles = (C: AppColors) =>
   StyleSheet.create({
@@ -228,6 +229,22 @@ const makeStyles = (C: AppColors) =>
     requestedSmallText: {
       color: C.text,
       fontSize: 13,
+      fontWeight: '800',
+    },
+    reportButton: {
+      minWidth: 160,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 22,
+      borderWidth: 1.5,
+      borderColor: C.destructive,
+    },
+    reportButtonText: {
+      color: C.destructive,
+      fontSize: 15,
       fontWeight: '800',
     },
   });
@@ -540,6 +557,16 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
             <Text style={styles.username}>@{profile?.username || 'username'}</Text>
 
             {renderProfileActionButton()}
+
+            <TouchableOpacity
+              style={styles.reportButton}
+              activeOpacity={0.7}
+              onPress={() => Alert.alert('Report User', 'Report submitted.')}
+            >
+              <Text style={styles.reportButtonText}>
+                Report User
+              </Text>
+            </TouchableOpacity>
 
             <View style={styles.infoCard}>
                 <Text style={styles.cardTitle}>Profile</Text>
