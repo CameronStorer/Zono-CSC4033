@@ -102,10 +102,20 @@ export default function Login() {
       </View>
 
       <View style={styles.screen}>
-          <Text style={styles.text}>Z O N O</Text>
+          <Text 
+            style={styles.text}
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            minimumFontScale={0.5} >
+            Z O N O </Text>
         <View style={styles.centerLoginBox}>
           <View style={[styles.loginBox, { backgroundColor: C.loginBoxBg, shadowColor: C.loginBoxShadow }]}>
-            <Text style={[styles.loginText, { color: C.loginTitleText }]}>Welcome to ZONO, Log In!</Text>
+            <Text style={[styles.loginText, { color: C.loginTitleText }]}
+              adjustsFontSizeToFit
+              numberOfLines={2}
+              minimumFontScale={0.6}
+            >
+              Welcome to ZONO, Log In!</Text>
 
             <TextInput
               style={[styles.input, { borderColor: C.loginInputBorder, backgroundColor: C.loginInputBg, color: C.text }]}
@@ -132,7 +142,12 @@ export default function Login() {
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={{ color: '#fff', textAlign: 'center' }}>Sign In</Text>
+                : <Text 
+                  style={{ color: '#fff', textAlign: 'center' }}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                >
+                Sign In</Text>
               }
             </TouchableOpacity>
 
@@ -140,7 +155,12 @@ export default function Login() {
               onPress={() => { setForm(EMPTY_FORM); setSignUpVisible(true); }}
               style={{ marginTop: 12, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#007AFF' }}
             >
-              <Text style={{ color: '#007AFF', textAlign: 'center', fontWeight: '600' }}>Create Account</Text>
+              <Text 
+                style={{ color: '#007AFF', textAlign: 'center', fontWeight: '600' }}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                >
+                  Create Account</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -220,7 +240,7 @@ export default function Login() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   top: { flex: 0.08, justifyContent: "flex-start", alignItems: "center" },
-  text: { fontSize: 65, fontWeight: "bold", fontFamily: "monospace", color: "#949494", textAlign: "center", margin: 100 },
+  text: { fontSize: 65, fontWeight: "bold", fontFamily: "monospace", color: "#949494", textAlign: "center", marginTop: 100, marginHorizontal: 20,},
   centerLoginBox: { position: "absolute", top: 50, right: 0, bottom: 0, left: 0, justifyContent: "center", alignItems: "center" },
   loginBox: {
     shadowOffset: { width: 0, height: 8 },
