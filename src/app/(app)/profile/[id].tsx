@@ -1,6 +1,6 @@
-import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/components/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
+import { makeStyles } from './_style';
 import { UserProfile } from '@/services/profileService';
 import {
   FriendProfilePreview,
@@ -15,222 +15,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import {ActivityIndicator,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from 'react-native';
-
-const makeStyles = (C: AppColors) =>
-  StyleSheet.create({
-    overlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    },
-    panel: {
-      flex: 1,
-      marginTop: 90,
-      backgroundColor: C.profilePanelBg,
-      borderTopLeftRadius: 36,
-      borderTopRightRadius: 36,
-      paddingTop: 28,
-      paddingHorizontal: 24,
-      alignItems: 'center',
-    },
-    closeButton: {
-      position: 'absolute',
-      top: 20,
-      right: 20,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: C.bgElevated,
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
-    },
-    closeButtonText: {
-      color: C.text,
-      fontSize: 28,
-      fontWeight: '700',
-      lineHeight: 30,
-    },
-    scrollView: {
-      width: '100%',
-      flex: 1,
-    },
-    scrollContent: {
-      width: '100%',
-      alignItems: 'center',
-      paddingTop: 28,
-      paddingBottom: 50,
-    },
-    avatarCircle: {
-      width: 110,
-      height: 110,
-      borderRadius: 55,
-      backgroundColor: C.bgElement,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 4,
-      borderColor: C.bgElement,
-      overflow: 'hidden',
-    },
-    avatarImage: {
-      width: '100%',
-      height: '100%',
-    },
-    initialsText: {
-      color: '#fff',
-      fontSize: 34,
-      fontWeight: '900',
-    },
-    name: {
-      fontSize: 34,
-      fontWeight: '700',
-      marginTop: 12,
-      color: C.text,
-      textAlign: 'center',
-    },
-    username: {
-      fontSize: 20,
-      color: C.textSecondary,
-      marginBottom: 14,
-      textAlign: 'center',
-    },
-    profileActionButton: {
-      minWidth: 160,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 22,
-    },
-    profileActionText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '800',
-    },
-    requestedButton: {
-      minWidth: 160,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 22,
-      backgroundColor: C.bgElevated,
-    },
-    requestedText: {
-      color: C.text,
-      fontSize: 16,
-      fontWeight: '800',
-    },
-    infoCard: {
-      width: '100%',
-      backgroundColor: C.profileCardBg,
-      borderRadius: 24,
-      padding: 20,
-      marginBottom: 16,
-    },
-    cardTitle: {
-      fontSize: 22,
-      fontWeight: '700',
-      marginBottom: 8,
-      color: C.text,
-    },
-    cardText: {
-      fontSize: 16,
-      color: C.textSecondary,
-      marginBottom: 4,
-    },
-    friendCountText: {
-      width: '100%',
-      fontSize: 20,
-      fontWeight: '700',
-      color: C.textSecondary,
-      marginBottom: 14,
-      marginTop: 4,
-    },
-    friendCard: {
-      width: '100%',
-      backgroundColor: C.profileCardBg,
-      borderRadius: 28,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginBottom: 16,
-    },
-    friendRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-    },
-    friendAvatar: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
-      backgroundColor: C.bgElement,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      marginRight: 14,
-    },
-    friendInfo: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    friendName: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: C.text,
-    },
-    friendMeta: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: C.textSecondary,
-      marginTop: 2,
-    },
-    smallAddButton: {
-      minWidth: 76,
-      paddingVertical: 9,
-      paddingHorizontal: 12,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    smallAddText: {
-      color: '#fff',
-      fontSize: 14,
-      fontWeight: '800',
-    },
-    center: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: C.profilePanelBg,
-      padding: 24,
-    },
-    message: {
-      color: C.text,
-      fontSize: 18,
-      fontWeight: '700',
-      textAlign: 'center',
-      marginTop: 14,
-    },
-    requestedSmallButton: {
-      minWidth: 92,
-      paddingVertical: 9,
-      paddingHorizontal: 12,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: C.bgElevated,
-    },
-
-    requestedSmallText: {
-      color: C.text,
-      fontSize: 13,
-      fontWeight: '800',
-    },
-  });
+import {ActivityIndicator,Alert,Modal,ScrollView,Text,TextInput,TouchableOpacity,View,} from 'react-native';
+import { createReport } from '@/services/reportService';
 
 function getInitials(name?: string | null, username?: string | null) {
   const value = name || username || '?';
@@ -341,6 +127,9 @@ export default function FriendProfilePage() {
   const [relationship, setRelationship] = useState<FriendRelationshipStatus>('none');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null);
 
@@ -430,6 +219,33 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
       console.log('friend row unsend request error:', error);
     } finally {
       setRowActionLoadingId(null);
+    }
+  }
+
+  function handleReportUser() {
+    setReportReason('');
+    setShowReportModal(true);
+  }
+
+  async function submitReport() {
+    const trimmed = reportReason.trim();
+    if (!trimmed || !currentProfile?.id || !profile?.id) {
+      return;
+    }
+
+    try {
+      setReportLoading(true);
+      await createReport(
+        Number(currentProfile.id),
+        Number(profile.id),
+        trimmed,
+      );
+      setShowReportModal(false);
+      Alert.alert('Report Submitted', 'We will review this report.');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to submit report.');
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -541,6 +357,17 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
 
             {renderProfileActionButton()}
 
+            <TouchableOpacity
+              style={styles.reportButton}
+              activeOpacity={0.7}
+              disabled={reportLoading}
+              onPress={handleReportUser}
+            >
+              <Text style={styles.reportButtonText}>
+                {reportLoading ? 'Reporting...' : 'Report User'}
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.infoCard}>
                 <Text style={styles.cardTitle}>Profile</Text>
                 <Text style={styles.cardText}>
@@ -580,6 +407,50 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
             </ScrollView>
         )}
         </View>
+
+        <Modal
+          visible={showReportModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowReportModal(false)}
+        >
+          <View style={styles.reportModalOverlay}>
+            <View style={styles.reportModalCard}>
+              <Text style={styles.reportModalTitle}>Report User</Text>
+              <TextInput
+                style={styles.reportModalInput}
+                placeholder="Reason for report..."
+                placeholderTextColor={C.textPlaceholder}
+                value={reportReason}
+                onChangeText={setReportReason}
+                multiline
+                maxLength={100}
+                autoFocus
+              />
+              <View style={styles.reportModalActions}>
+                <TouchableOpacity
+                  onPress={() => setShowReportModal(false)}
+                  disabled={reportLoading}
+                >
+                  <Text style={styles.reportModalCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={submitReport}
+                  disabled={reportLoading || !reportReason.trim()}
+                >
+                  <Text
+                    style={[
+                      styles.reportModalSubmit,
+                      (!reportReason.trim() || reportLoading) && { opacity: 0.4 },
+                    ]}
+                  >
+                    {reportLoading ? 'Submitting...' : 'Submit Report'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
     </View>
     );
 }
