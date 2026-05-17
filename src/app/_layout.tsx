@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider } from '@/components/auth-context';
 import { supabase } from '@/components/supabase';
 import { AppThemeProvider, useAppTheme } from '@/contexts/theme-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RouteGuard() {
   const router = useRouter();
@@ -48,10 +49,12 @@ function InnerLayout() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AppThemeProvider>
-        <InnerLayout />
-      </AppThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>  
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <InnerLayout />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView> 
   );
 }

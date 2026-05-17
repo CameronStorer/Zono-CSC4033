@@ -15,7 +15,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, } from 'react-native';
+import {ActivityIndicator,ScrollView,Text,TouchableOpacity,View,} from 'react-native';
 
 function getInitials(name?: string | null, username?: string | null) {
   const value = name || username || '?';
@@ -156,7 +156,7 @@ export default function FriendProfilePage() {
     }
   }
 
-  useEffect(() => { loadProfilePage(); }, [id, currentProfile?.id]);
+  useEffect(() => {loadProfilePage();}, [id, currentProfile?.id]);
 
   async function handleProfileAction() {
     if (!currentProfile?.id || !profile?.id) {
@@ -181,26 +181,26 @@ export default function FriendProfilePage() {
   }
 
   async function handleAddFriendFromRow(targetUserId: number) {
-    if (!currentProfile?.id) {
-      return;
-    }
-
-    try {
-      setRowActionLoadingId(targetUserId);
-
-      await sendProfileFriendRequest(Number(currentProfile.id), targetUserId);
-
-      setRequestedIds((prev) =>
-        prev.includes(targetUserId) ? prev : [...prev, targetUserId]
-      );
-    } catch (error) {
-      console.log('friend row add request error:', error);
-    } finally {
-      setRowActionLoadingId(null);
-    }
+  if (!currentProfile?.id) {
+    return;
   }
 
-  async function handleUnsendFriendFromRow(targetUserId: number) {
+  try {
+    setRowActionLoadingId(targetUserId);
+
+    await sendProfileFriendRequest(Number(currentProfile.id), targetUserId);
+
+    setRequestedIds((prev) =>
+      prev.includes(targetUserId) ? prev : [...prev, targetUserId]
+    );
+  } catch (error) {
+    console.log('friend row add request error:', error);
+  } finally {
+    setRowActionLoadingId(null);
+  }
+}
+
+async function handleUnsendFriendFromRow(targetUserId: number) {
     if (!currentProfile?.id) {
       return;
     }
@@ -270,55 +270,55 @@ export default function FriendProfilePage() {
     );
   }
 
-  function closeFriendProfile() {
-    if (router.canDismiss()) {
-      router.dismiss(1);
-      return;
+    function closeFriendProfile() {
+      if (router.canDismiss()) {
+        router.dismiss(1);
+        return;
+      }
+
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
+      router.dismissTo('/map');
     }
 
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.dismissTo('/map');
-  }
-
-  return (
+    return (
     <View style={styles.overlay}>
-      <View style={styles.panel}>
+        <View style={styles.panel}>
         <TouchableOpacity style={styles.closeButton} onPress={closeFriendProfile}>
-          <Text style={styles.closeButtonText}>×</Text>
+            <Text style={styles.closeButtonText}>×</Text>
         </TouchableOpacity>
 
         {loading ? (
-          <View style={styles.center}>
+            <View style={styles.center}>
             <ActivityIndicator color={C.accent} size="large" />
             <Text style={styles.message}>Loading profile...</Text>
-          </View>
+            </View>
         ) : (
-          <ScrollView
+            <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-          >
+            >
             <View style={styles.avatarCircle}>
-              {profile?.avatar_url ? (
+                {profile?.avatar_url ? (
                 <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-              ) : (
+                ) : (
                 <View
-                  style={{
+                    style={{
                     width: '100%',
                     height: '100%',
                     backgroundColor: C.accent,
                     alignItems: 'center',
                     justifyContent: 'center',
-                  }}
+                    }}
                 >
-                  <Text style={styles.initialsText}>
+                    <Text style={styles.initialsText}>
                     {getInitials(profile?.full_name, profile?.username)}
-                  </Text>
+                    </Text>
                 </View>
-              )}
+                )}
             </View>
 
             <Text style={styles.name}>{profile?.full_name || 'Unknown User'}</Text>
@@ -327,28 +327,28 @@ export default function FriendProfilePage() {
             {renderProfileActionButton()}
 
             <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>Profile</Text>
-              <Text style={styles.cardText}>
+                <Text style={styles.cardTitle}>Profile</Text>
+                <Text style={styles.cardText}>
                 Status: {profile?.status || 'No status'}
-              </Text>
-              <Text style={styles.cardText}>
+                </Text>
+                <Text style={styles.cardText}>
                 Location sharing: {profile?.location_sharing || 'Unknown'}
-              </Text>
+                </Text>
             </View>
 
             <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>About</Text>
-              <Text style={styles.cardText}>
+                <Text style={styles.cardTitle}>About</Text>
+                <Text style={styles.cardText}>
                 Bio: {profile?.bio || 'No bio yet'}
-              </Text>
+                </Text>
             </View>
 
             <Text style={styles.friendCountText}>{friends.length} friends</Text>
 
             <View style={styles.friendCard}>
-              {friends.length === 0 ? (
+                {friends.length === 0 ? (
                 <Text style={styles.cardText}>No friends yet</Text>
-              ) : (
+                ) : (
                 friends.map((friend) => (
                   <FriendRow
                     key={friend.id}
@@ -360,11 +360,11 @@ export default function FriendProfilePage() {
                     onUnsendRequest={handleUnsendFriendFromRow}
                   />
                 ))
-              )}
+                )}
             </View>
-          </ScrollView>
+            </ScrollView>
         )}
-      </View>
+        </View>
     </View>
-  );
+    );
 }
