@@ -108,12 +108,12 @@ export default function AdminPanel() {
   };
 
   // update report_status on a report row
-  const handleReportAction = async (blockId: string, status: 'resolved' | 'dismissed') => {
+  const handleReportAction = async (reportId: string, status: 'resolved' | 'dismissed') => {
     try {
       const { error } = await supabaseAdmin
         .from(reportsConfig.table)
         .update({ report_status: status })
-        .eq('block_id', blockId);
+        .eq('report_id', reportId);
       if (error) throw error;
       await loadReportsData();
     } catch (e: any) {
@@ -343,17 +343,17 @@ export default function AdminPanel() {
                 {reportsLoading && !refreshing ? (
                   <ActivityIndicator size="large" color="#6200ee" style={{ margin: 40 }} />
                 ) : reportsData.map(item => (
-                  <View key={item.block_id} style={styles.dataRow}>
+                  <View key={item.report_id} style={styles.dataRow}>
                     {reportsConfig.showColumns.map(col => (
                       <Text key={col} style={[styles.dataCell, { width: reportsConfig.widths[col] ?? 120 }]} numberOfLines={1}>
                         {String(item[col] ?? '—')}
                       </Text>
                     ))}
                     <View style={[styles.actionCell, { width: 160 }]}>
-                      <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'resolved')}>
+                      <TouchableOpacity onPress={() => handleReportAction(item.report_id, 'resolved')}>
                         <Text style={styles.editBtn}>Resolve</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleReportAction(item.block_id, 'dismissed')}>
+                      <TouchableOpacity onPress={() => handleReportAction(item.report_id, 'dismissed')}>
                         <Text style={styles.deleteBtn}>Dismiss</Text>
                       </TouchableOpacity>
                     </View>
