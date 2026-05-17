@@ -5,8 +5,9 @@
 import React, { useEffect, useState } from 'react';
 import {Dimensions,StyleSheet,Text,View,} from 'react-native';
 import Animated, {useSharedValue,useAnimatedStyle,withTiming,
-  withSpring,runOnJS,
+  withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Image } from 'expo-image';
 import FallingSticker from '@/components/emoji/FallingSticker';
 import STICKERS from '@/data/stickers';
@@ -17,6 +18,17 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STICKER_COUNT       = 12;    // how many stickers fall at once
 const TOTAL_DISPLAY_TIME  = 3500;  // ms before overlay starts to dismiss
 
+const MIN_MULTIPLIER = 1.0;
+const MAX_MULTIPLIER = 3.0; // must match MAX_SCALE in StickerButton.tsx
+const MIN_COUNT      = 1;
+const MAX_COUNT      = 12;
+
+// Converts how long sender held (1.0–3.0) → how many stickers fall (1–12)
+// Linear interpolation: 1.0 → 1 sticker, 3.0 → 12 stickers
+function sizeToCount(sizeMultiplier: number): number {
+  const ratio = (sizeMultiplier - MIN_MULTIPLIER) / (MAX_MULTIPLIER - MIN_MULTIPLIER);
+  return Math.round(MIN_COUNT + ratio * (MAX_COUNT - MIN_COUNT));
+}
 // ── Types ───
 export type SenderInfo = {
   username: string;
@@ -46,28 +58,27 @@ export default function IncomingStickerOverlay({
   senderInfo,
   onComplete,
 }: Props) {
-  // Find the matching sticker from our local list using sticker_id
-  // Falls back to first sticker if not found (safety net)
-  const sticker =
-    STICKERS.find((s) => s.id === reaction.sticker_id) ?? STICKERS[0];
+    const sticker = STICKERS.find((s) => s.id === reaction.sticker_id) ?? STICKERS[0];
+
+    // If sender tapped multiple times → use count directly
+    // If sender held the sticker     → use size_multiplier → count
+    // Cap at 20 so screen doesn't get overwhelmed
+    const rawCount = reaction.count > 1
+    ? reaction.count
+    : sizeToCount(reaction.size_multiplier);
+    const stickerCount = Math.min(rawCount, 20);
 
   // ── Generate faller configs once on mount ───
-  // useState with an initializer function runs ONCE — not on every render.
-  // This gives each sticker a unique random position/speed/rotation.
-  const [fallers] = useState<FallerConfig[]>(() =>
-    Array.from({ length: STICKER_COUNT }, (_, i) => ({
-      id: i,
-      source: sticker.source,
-      // spread across full screen width, minus sticker size so it doesn't clip edge
-      startX: Math.random() * (SCREEN_WIDTH - 56),
-      // stagger start times: 0ms to 800ms apart
-      delay: Math.random() * 800,
-      // each sticker falls at a different speed: 1.3s to 2.2s
-      duration: 1300 + Math.random() * 900,
-      // random tilt: -35° to +35°
-      initialRotation: Math.random() * 70 - 35,
+    const [fallers] = useState<FallerConfig[]>(() =>
+    Array.from({ length: stickerCount }, (_, i) => ({
+        id: i,
+        source: sticker.source,
+        startX: Math.random() * (SCREEN_WIDTH - 56),
+        delay: Math.random() * 800,
+        duration: 1300 + Math.random() * 900,
+        initialRotation: Math.random() * 70 - 35,
     }))
-  );
+    );
 
   // ── Shared animation values ─
   const backdropOpacity   = useSharedValue(0);
@@ -100,7 +111,7 @@ export default function IncomingStickerOverlay({
         0,
         { duration: 500 },
         (finished) => {
-          if (finished) runOnJS(handleComplete)();
+          if (finished) scheduleOnRN(handleComplete);
         }
       );
     }, TOTAL_DISPLAY_TIME);
@@ -132,18 +143,17 @@ export default function IncomingStickerOverlay({
   const displayName = senderInfo.full_name ?? senderInfo.username;
 
   // Badge text:
-  // size_multiplier > 1 → show "2.5×" (they held the sticker)
-  // size_multiplier = 1 → show the sticker label 
-  const badgeText =
-    reaction.size_multiplier > 1
-      ? `${reaction.size_multiplier.toFixed(1)}×`
-      : sticker.label;
+    const badgeText = `${stickerCount}×`;
 
   // ── Render ───
   return (
     // Animated.View wrapper lets us fade out EVERYTHING in one go
     <Animated.View
-      style={[StyleSheet.absoluteFill, wrapperStyle]}
+      style={[
+        StyleSheet.absoluteFill,
+        { overflow: 'visible' }, 
+        wrapperStyle,
+        ]}
       pointerEvents="none" // never block map touches
     >
       {/* ── Dark backdrop ───────────────────────────────────── */}

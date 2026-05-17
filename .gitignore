@@ -14,3 +14,5 @@ android/
 .expo/types/router.d.ts
 .expo/devices.json
 CLAUDE.local.md
+# Local memory notes - not shared
+memory/

@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   // Covers the full screen — sits on top of the map
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: 'transparent',
   },
 
   // The white card that slides up from the bottom
