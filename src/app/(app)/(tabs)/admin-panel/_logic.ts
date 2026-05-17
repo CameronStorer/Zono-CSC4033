@@ -21,12 +21,12 @@ export const DATABASE_CONFIG = {
   reports: {
     label: 'Reports',
     table: 'reports',
-    showColumns: ['block_id', 'created_at', 'blocker_id', 'blocked_id', 'report_reason', 'report_status',] as const,
+    showColumns: ['report_id', 'created_at', 'reporter_id', 'reported_id', 'report_reason', 'report_status',] as const,
     widths: { 
-      id: 80, 
+      report_id: 80, 
       created_at: 180, 
-      blocker_id: 120, 
-      blocked_id: 120,
+      reporter_id: 120, 
+      reported_id: 120,
       report_reason: 140,
       report_status: 140,
     } as Record<string, number>

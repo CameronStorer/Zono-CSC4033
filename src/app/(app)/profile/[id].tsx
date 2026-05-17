@@ -15,7 +15,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import {ActivityIndicator,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from 'react-native';
+import {ActivityIndicator,Alert,Modal,ScrollView,StyleSheet,Text,TextInput,TouchableOpacity,View,} from 'react-native';
+import { createReport } from '@/services/reportService';
 
 const makeStyles = (C: AppColors) =>
   StyleSheet.create({
@@ -230,6 +231,69 @@ const makeStyles = (C: AppColors) =>
       fontSize: 13,
       fontWeight: '800',
     },
+    reportButton: {
+      minWidth: 160,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 22,
+      borderWidth: 1.5,
+      borderColor: C.destructive,
+    },
+    reportButtonText: {
+      color: C.destructive,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    reportModalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    reportModalCard: {
+      width: '85%',
+      backgroundColor: C.bgElement,
+      borderRadius: 24,
+      padding: 24,
+    },
+    reportModalTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: C.text,
+      marginBottom: 16,
+    },
+    reportModalInput: {
+      backgroundColor: C.bgInput,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      color: C.text,
+      minHeight: 100,
+      textAlignVertical: 'top',
+      borderWidth: 1,
+      borderColor: C.border,
+      marginBottom: 20,
+    },
+    reportModalActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 20,
+    },
+    reportModalCancel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: C.textSecondary,
+      paddingVertical: 10,
+    },
+    reportModalSubmit: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: C.destructive,
+      paddingVertical: 10,
+    },
   });
 
 function getInitials(name?: string | null, username?: string | null) {
@@ -341,6 +405,9 @@ export default function FriendProfilePage() {
   const [relationship, setRelationship] = useState<FriendRelationshipStatus>('none');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null);
 
@@ -430,6 +497,33 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
       console.log('friend row unsend request error:', error);
     } finally {
       setRowActionLoadingId(null);
+    }
+  }
+
+  function handleReportUser() {
+    setReportReason('');
+    setShowReportModal(true);
+  }
+
+  async function submitReport() {
+    const trimmed = reportReason.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    try {
+      setReportLoading(true);
+      await createReport(
+        Number(currentProfile.id),
+        Number(profile.id),
+        trimmed,
+      );
+      setShowReportModal(false);
+      Alert.alert('Report Submitted', 'We will review this report.');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to submit report.');
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -541,6 +635,17 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
 
             {renderProfileActionButton()}
 
+            <TouchableOpacity
+              style={styles.reportButton}
+              activeOpacity={0.7}
+              disabled={reportLoading}
+              onPress={handleReportUser}
+            >
+              <Text style={styles.reportButtonText}>
+                {reportLoading ? 'Reporting...' : 'Report User'}
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.infoCard}>
                 <Text style={styles.cardTitle}>Profile</Text>
                 <Text style={styles.cardText}>
@@ -580,6 +685,50 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
             </ScrollView>
         )}
         </View>
+
+        <Modal
+          visible={showReportModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowReportModal(false)}
+        >
+          <View style={styles.reportModalOverlay}>
+            <View style={styles.reportModalCard}>
+              <Text style={styles.reportModalTitle}>Report User</Text>
+              <TextInput
+                style={styles.reportModalInput}
+                placeholder="Reason for report..."
+                placeholderTextColor={C.textPlaceholder}
+                value={reportReason}
+                onChangeText={setReportReason}
+                multiline
+                maxLength={100}
+                autoFocus
+              />
+              <View style={styles.reportModalActions}>
+                <TouchableOpacity
+                  onPress={() => setShowReportModal(false)}
+                  disabled={reportLoading}
+                >
+                  <Text style={styles.reportModalCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={submitReport}
+                  disabled={reportLoading || !reportReason.trim()}
+                >
+                  <Text
+                    style={[
+                      styles.reportModalSubmit,
+                      (!reportReason.trim() || reportLoading) && { opacity: 0.4 },
+                    ]}
+                  >
+                    {reportLoading ? 'Submitting...' : 'Submit Report'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
     </View>
     );
 }
