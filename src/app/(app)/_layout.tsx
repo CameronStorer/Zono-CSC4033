@@ -6,20 +6,24 @@ export default function AppLayout() {
     <TabNavProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+
         <Stack.Screen
           name="profile/index"
           options={{
             headerShown: false,
-            presentation: 'modal',
+            presentation: 'transparentModal',
             gestureEnabled: true,
+            animation: 'slide_from_bottom',
           }}
         />
+
         <Stack.Screen
           name="profile/[id]"
           options={{
             headerShown: false,
-            presentation: 'modal',
+            presentation: 'transparentModal',
             gestureEnabled: true,
+            animation: 'slide_from_bottom',
           }}
         />
       </Stack>
