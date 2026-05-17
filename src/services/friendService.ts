@@ -23,23 +23,26 @@ export async function searchUserByUserName( searchText:string):Promise<UserLocat
 
 }
 
-export async function sendFriendRequest (sender_ID: number, receiver_ID:number): Promise<FriendRequestRow|null>{
-    const {data, error} = await supabase
-        .from('friend_requests')
-        .insert([
-            {   sender_id : sender_ID,
-                receiver_id : receiver_ID,
-                status : 'pending'
-            },
-        ])
-        .select() // give me 1 data back
-        .single(); // in single not array
+export async function sendFriendRequest(sender_ID: number, receiver_ID: number): Promise<FriendRequestRow | null> {
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .upsert(
+      {
+        sender_id: sender_ID,
+        receiver_id: receiver_ID,
+        status: 'pending',
+        responded_at: null,   // reset from previous accepted/rejected
+      },
+      { onConflict: 'sender_id,receiver_id' }  // match the unique constraint
+    )
+    .select()
+    .single();
 
-    if (error){
-        console.log('sendFriendRequest error:', error);
-        throw error;
-    };
-    return data
+  if (error) {
+    console.log('sendFriendRequest error:', error);
+    throw error;
+  }
+  return data;
 }
 
 export async function getPendingRequest (userID: number): Promise<FriendRequestRow[]>{

@@ -31,36 +31,14 @@ export async function acceptFriendRequest(
   currentUserId: number,
   senderId: number
 ) {
-  const { error: requestError } = await supabase
-    .from('friend_requests')
-    .update({
-      status: 'accepted',
-      responded_at: new Date().toISOString(),
-    })
-    .eq('id', requestId)
-    .eq('receiver_id', currentUserId)
-    .eq('sender_id', senderId)
-    .eq('status', 'pending');
+  const { error } = await supabase.rpc('accept_friend_request', {
+    p_request_id:      requestId,
+    p_current_user_id: currentUserId,
+    p_sender_id:       senderId,
+  });
 
-  if (requestError) throw requestError;
-
-  const { error: friendshipError } = await supabase
-    .from('friendships')
-    .upsert(
-      [
-        {
-          user_id: currentUserId,
-          friend_id: senderId,
-          status: 'active',
-        },
-      ],
-      {
-        onConflict: 'user_id,friend_id',
-      }
-    );
-
-  if (friendshipError) throw friendshipError;
-  }
+  if (error) throw error;
+}
 
 export async function deleteFriendRequest(requestId: number) {
   const { error } = await supabase
