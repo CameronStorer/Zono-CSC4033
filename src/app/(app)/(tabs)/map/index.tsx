@@ -77,12 +77,13 @@ export default function Map() {
 
   const [stickerSheetVisible, setStickerSheetVisible] = useState(false);
 
-  const [flyingSticker, setFlyingSticker] = useState<{
+  const [flyingStickers, setFlyingStickers] = useState<Array<{
+    id: string;
     sticker: StickerItem;
     sizeMultiplier: number;
     targetX: number;
     targetY: number;
-  } | null>(null);
+  }>>([]);
 
   // Queue: reactions waiting to be shown (oldest first)
   const [reactionQueue, setReactionQueue] = useState<EmojiReaction[]>([]);
@@ -93,6 +94,15 @@ export default function Map() {
 
   // Prevents showing two overlays at the same time
   const isShowingReaction = useRef(false);
+
+  // ── Sticker debounce refs ─────────────────────────────────────
+  // Collects rapid taps and sends ONE reaction after 1.5s of silence
+  const stickerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStickerRef  = useRef<{
+    sticker: StickerItem;
+    count: number;
+    sizeMultiplier: number;
+  } | null>(null);
 
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
@@ -358,24 +368,28 @@ export default function Map() {
       }
   }
   async function handleAddFriend(targetUserId: number) {
-  if (!currentUserId){
-    console.log("No log in user found");
-    return;
-  }
-  try{
-    await sendFriendRequest(currentUserId,targetUserId);
-    setRequestedIds((prevRequestId) =>[...prevRequestId, targetUserId]);
-  }catch (error){
-    console.log("send friend request error", error);
-  }
-  }
-  async function handleCancelRequest(targetUserId: number) {
-    if (!currentUserId) return;
+      if (!currentUserId) return;
 
+      setRequestedIds((prev) => [...prev, targetUserId]);
+
+      try {
+        await sendFriendRequest(currentUserId, targetUserId);
+
+      } catch (error: any) {
+        if (error?.code === '23505') {
+          return;
+        }
+
+        // Real unexpected error — revert the optimistic update
+        setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
+        console.log('send friend request error', error);
+      }
+    }
+    async function handleCancelRequest(targetUserId: number) {
+    if (!currentUserId) return;
     try {
       await cancelFriendRequest(currentUserId, targetUserId);
-
-      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId ));
+      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
     } catch (error) {
       console.log('cancel friend request error:', error);
     }
@@ -437,7 +451,7 @@ export default function Map() {
   try {
 
     // delete the friendship row from supabase
-    const { error } = await supabase
+    const { error:error1 } = await supabase
       .from('friendships')
       .delete()
       .eq('user_id', currentUserId)
@@ -445,8 +459,19 @@ export default function Map() {
 
 
     // if supabase throws an error, throw the error on the app
-    if (error) {
-      console.log('unfollow error:', error);
+    if (error1) {
+      console.log('unfollow error:', error1);
+      return;
+    }
+    // Delete their side
+    const { error: error2 } = await supabase
+      .from('friendships')
+      .delete()
+      .eq('user_id', targetUserId)
+      .eq('friend_id', currentUserId);
+
+    if (error2) {
+      console.log('unfollow error (their side):', error2);
       return;
     }
 
@@ -519,51 +544,81 @@ export default function Map() {
     setIsSearching(false);
   }
 
-  // ── STICKER FUNCTIONS ─────────────────────────────────────────
+// ── STICKER FUNCTIONS ─────────────────────────────────────────
 
-// Called by EmojiPickerSheet when user taps or releases a sticker.
-// Saves the reaction to Supabase then launches the flying animation.
-async function handleSendSticker(sticker: StickerItem, sizeMultiplier: number) {
+// Called every time user taps a sticker.
+// Does NOT send immediately — waits 1.5s for more taps.
+// If same sticker is tapped again before timer fires → increments count.
+// If different sticker is tapped → flushes previous, starts new.
+function handleSendSticker(sticker: StickerItem, sizeMultiplier: number) {
   if (!currentUserId || !selectedFriend) return;
 
-  try {
-    // Insert into emoji_reactions — this triggers the receiver's realtime listener
-    await sendEmojiReaction({
-      sender_id: currentUserId,
-      receiver_id: Number(selectedFriend.id), // MapFriend.id is string → convert
-      sticker_id: sticker.id,
-      sticker_label: sticker.label,
-      size_multiplier: sizeMultiplier,
-      count: 1,
-      sender_lat: userLocation?.coords.latitude ?? null,
-      sender_lng: userLocation?.coords.longitude ?? null,
-    });
+  // flying animation IMMEDIATELY on every tap
+  launchFlyingSticker(sticker, sizeMultiplier);
 
-    // Launch the flying sticker on OUR screen
-    await launchFlyingSticker(sticker, sizeMultiplier);
-  } catch (error) {
-    console.log('[Map] handleSendSticker error:', error);
+  const pending = pendingStickerRef.current;
+
+  if (pending && pending.sticker.id === sticker.id) {
+    // Same sticker tapped again — just increment the count
+    pendingStickerRef.current = {
+      sticker,
+      count: pending.count + 1,
+      // Keep the highest sizeMultiplier seen (in case of mixed tap/hold)
+      sizeMultiplier: Math.max(pending.sizeMultiplier, sizeMultiplier),
+    };
+  } else {
+    // Different sticker — flush whatever was pending first
+    if (pending) flushPendingSticker();
+
+    // Start collecting for this new sticker
+    pendingStickerRef.current = { sticker, count: 1, sizeMultiplier };
   }
+
+  // Reset the 1.5s timer on every tap
+  if (stickerDebounceRef.current) clearTimeout(stickerDebounceRef.current);
+  stickerDebounceRef.current = setTimeout(() => {
+    flushPendingSticker();
+  }, 1500);
 }
 
-// Converts the friend's lat/lng to screen pixels using the map ref,
-// then sets state so FlyingStickerLayer renders and animates.
-async function launchFlyingSticker(sticker: StickerItem, sizeMultiplier: number) {
-    if (!mapRef.current || !selectedFriend) return;
+// Sends the accumulated pending sticker reaction to Supabase.
+// Called either when the 1.5s timer fires OR a different sticker is tapped.
+async function flushPendingSticker() {
+  const pending = pendingStickerRef.current;
+  if (!pending || !currentUserId || !selectedFriend) return;
 
+  // Clear refs immediately so a new tap can start a new batch
+  pendingStickerRef.current  = null;
+  stickerDebounceRef.current = null;
+
+  try {
+    await sendEmojiReaction({
+      sender_id:      currentUserId,
+      receiver_id:    Number(selectedFriend.id),
+      sticker_id:     pending.sticker.id,
+      sticker_label:  pending.sticker.label,
+      size_multiplier: pending.sizeMultiplier,
+      count:          pending.count,           // ← the real count!
+      sender_lat:     userLocation?.coords.latitude  ?? null,
+      sender_lng:     userLocation?.coords.longitude ?? null,
+    });
+
+  } catch (error) {
+    console.log('[Map] flushPendingSticker error:', error);
+  }
+}
+  // Converts the friend's lat/lng to screen pixels using the map ref,
+  // then sets state so FlyingStickerLayer renders and animates.
+  async function launchFlyingSticker(sticker: StickerItem, sizeMultiplier: number) {
+    if (!mapRef.current || !selectedFriend) return;
     try {
-      // pointForCoordinate: lat/lng → { x, y } screen pixel position
       const point = await mapRef.current.pointForCoordinate({
         latitude: selectedFriend.latitude,
         longitude: selectedFriend.longitude,
       });
-
-      setFlyingSticker({
-        sticker,
-        sizeMultiplier,
-        targetX: point.x,
-        targetY: point.y,
-      });
+      if (point.x === 0 && point.y === 0) return; // guard: map not ready
+      const id = `${Date.now()}-${Math.random()}`;  // unique key per animation
+      setFlyingStickers((prev) => [...prev, { id, sticker, sizeMultiplier, targetX: point.x, targetY: point.y }]);
     } catch (error) {
       console.log('[Map] launchFlyingSticker error:', error);
     }
@@ -1000,15 +1055,18 @@ async function launchFlyingSticker(sticker: StickerItem, sizeMultiplier: number)
         />
 
         {/* ── FLYING STICKER (sender side) ──────────────── */}
-        {flyingSticker && (
+        {flyingStickers.map((fs) => (
           <FlyingStickerLayer
-            sticker={flyingSticker.sticker}
-            sizeMultiplier={flyingSticker.sizeMultiplier}
-            targetX={flyingSticker.targetX}
-            targetY={flyingSticker.targetY}
-            onComplete={() => setFlyingSticker(null)}
+            key={fs.id}
+            sticker={fs.sticker}
+            sizeMultiplier={fs.sizeMultiplier}
+            targetX={fs.targetX}
+            targetY={fs.targetY}
+            onComplete={() =>
+              setFlyingStickers((prev) => prev.filter((s) => s.id !== fs.id))
+            }
           />
-        )}
+        ))}
 
         {/* ── INCOMING STICKER OVERLAY (receiver side) ──── */}
         {currentReaction && currentSender && (

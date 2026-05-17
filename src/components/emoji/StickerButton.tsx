@@ -15,7 +15,7 @@ import { StickerItem } from '@/data/stickers';
 
 const STICKER_SIZE = 110;     
 const MAX_SCALE    = 3.0;   
-const GROW_DURATION = 2000;  
+const GROW_DURATION = 1500;  
 
 type Props = {
   sticker: StickerItem;
@@ -62,7 +62,7 @@ export default function StickerButton({ sticker, onSend, isScrolling }: Props) {
           autoSentFlag.value = true;        
           runOnJS(handleSend)(MAX_SCALE);     
           // Reset back to normal size smoothly
-          scale.value = withTiming(1, { duration: 300 });
+          scale.value = withTiming(1, { duration: 200 });
         }
       }
     );
@@ -85,7 +85,7 @@ export default function StickerButton({ sticker, onSend, isScrolling }: Props) {
 
     // Send at whatever size the sticker reached
     runOnJS(handleSend)(Math.max(1, currentScale));
-    scale.value = withTiming(1, { duration: 200 });
+    scale.value = withTiming(1, { duration: 150 });
   }, [scale, autoSentFlag, handleSend, isScrolling]);
 
   // Render 

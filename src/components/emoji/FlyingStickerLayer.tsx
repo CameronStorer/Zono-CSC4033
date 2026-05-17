@@ -15,8 +15,8 @@ import { StickerItem } from '@/data/stickers';
 // ── Constants ───
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STICKER_SIZE    = 64;   
-const FLY_DURATION    = 650;  
-const FADE_DELAY      = 400;  
+const FLY_DURATION    = 500;  
+const FADE_DELAY      = 200;  
 const FADE_DURATION   = 250;  
 
 // Where the sticker starts — the middle of where the picker sheet sits
