@@ -26,7 +26,9 @@ import IncomingStickerOverlay, { SenderInfo } from '@/components/emoji/IncomingS
 import {
   sendEmojiReaction,
   subscribeToIncomingEmojiReactions,
-  markReactionSeen,getUnseenEmojiReactions,
+  markReactionSeen,
+  markBatchSeen,
+  getUnseenEmojiReactions,
 } from '@/services/emojiReactionService';
 import { EmojiReaction } from '@/types/emojiReaction';
 import { StickerItem } from '@/data/stickers';
@@ -87,6 +89,7 @@ export default function Map() {
 
   // Queue: reactions waiting to be shown (oldest first)
   const [reactionQueue, setReactionQueue] = useState<EmojiReaction[]>([]);
+  const [queueDrainTick, setQueueDrainTick] = useState(0);
 
   // Currently displayed reaction (null = overlay hidden)
   const [currentReaction, setCurrentReaction] = useState<EmojiReaction | null>(null);
@@ -94,6 +97,7 @@ export default function Map() {
 
   // Prevents showing two overlays at the same time
   const isShowingReaction = useRef(false);
+  const queuedReactionIds = useRef<Set<string>>(new Set());
 
   // ── Sticker debounce refs ─────────────────────────────────────
   // Collects rapid taps and sends ONE reaction after 1.5s of silence
@@ -178,18 +182,19 @@ export default function Map() {
   }, [profile?.id]);
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
-  // ── Queue processor ──────────────────────────────────────────
-  // Watches the queue and shows one reaction at a time.
-  // Fires automatically whenever reactionQueue changes.
+  // ── Queue processor ─────────────────────────────────────────
+  // Fires when queue changes OR when queueDrainTick increments
+  // (queueDrainTick is bumped by handleReactionComplete so the
+  //  effect re-runs even though reactionQueue itself did not change).
   useEffect(() => {
-    if (isShowingReaction.current) return;  // already showing one
-    if (reactionQueue.length === 0) return; // nothing to show
+    if (isShowingReaction.current) return;
+    if (reactionQueue.length === 0) return;
 
     const [next, ...rest] = reactionQueue;
     setReactionQueue(rest);
     isShowingReaction.current = true;
     resolveSenderAndShow(next);
-  }, [reactionQueue]);
+  }, [reactionQueue, queueDrainTick]);
 
   // ── Fetch unseen reactions + subscribe to Realtime ───────────
   // A: Fetch from DB on mount → catches offline/missed reactions
@@ -201,18 +206,23 @@ export default function Map() {
     // A. Fetch unseen reactions from database (offline inbox)
     getUnseenEmojiReactions(currentUserId)
       .then((unseen) => {
-        if (unseen.length > 0) {
-          setReactionQueue((prev) => [...prev, ...unseen]);
+        const fresh = unseen.filter((r) => {
+          if (queuedReactionIds.current.has(r.id)) return false;
+          queuedReactionIds.current.add(r.id);
+          return true;
+        });
+        if (fresh.length > 0) {
+          setReactionQueue((prev) => [...prev, ...fresh]);
         }
       })
-      .catch((err) =>
-        console.log('[Map] getUnseenEmojiReactions error:', err)
-      );
+      .catch((err) => console.log('[Map] getUnseenEmojiReactions error:', err));
 
     // B. Listen for new reactions via Realtime (online delivery)
     const unsubscribe = subscribeToIncomingEmojiReactions(
       currentUserId,
       (reaction) => {
+        if (queuedReactionIds.current.has(reaction.id)) return;
+        queuedReactionIds.current.add(reaction.id);
         setReactionQueue((prev) => [...prev, reaction]);
       }
     );
@@ -679,12 +689,17 @@ async function flushPendingSticker() {
   // Marks reaction seen, hides overlay, allows queue to continue.
   function handleReactionComplete() {
     if (currentReaction) {
-      markReactionSeen(currentReaction.id);
+      if (currentReaction.batch_id) {
+        markBatchSeen(currentReaction.batch_id);
+      } else {
+        markReactionSeen(currentReaction.id);  // legacy rows with no batch_id
+      }
+      queuedReactionIds.current.delete(currentReaction.id);  // Fix 2
     }
     setCurrentReaction(null);
     setCurrentSender(null);
     isShowingReaction.current = false;
-    // reactionQueue useEffect will fire again and show next item
+    setQueueDrainTick((t) => t + 1);  // Fix 1
   }
   // query the user for their location 
   useEffect(() => {

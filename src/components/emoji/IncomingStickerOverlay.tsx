@@ -82,7 +82,7 @@ export default function IncomingStickerOverlay({
 
   // ── Shared animation values ─
   const backdropOpacity   = useSharedValue(0);
-  const headerTranslateY  = useSharedValue(-100); // starts above screen
+  const headerTranslateY  = useSharedValue(-60); // starts above screen
   const badgeScale        = useSharedValue(0);
   const badgeOpacity      = useSharedValue(0);
   const everythingOpacity = useSharedValue(1); // used for final fade-out
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   // Frosted glass card at the top
   header: {
     position: 'absolute',
-    top: 56,
+    top: SCREEN_HEIGHT * 0.38 - 88,
     left: 16,
     right: 16,
     flexDirection: 'row',

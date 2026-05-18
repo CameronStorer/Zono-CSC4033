@@ -8,8 +8,9 @@ export type EmojiReaction = {
   count: number;            
   sender_lat: number | null;
   sender_lng: number | null;
-  created_at: string;      
-  seen_at: string | null;   
+  batch_id?: string | null;
+  created_at: string;
+  seen_at: string | null;
 };
 
 // What we send when inserting a new reaction

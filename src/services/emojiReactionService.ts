@@ -76,6 +76,21 @@ export async function markReactionSeen(reactionId: string): Promise<void> {
   }
 }
 
+// MARK all rows sharing the same batch_id as seen.
+// Use this instead of markReactionSeen when batch_id is present.
+// Falls back to markReactionSeen for legacy rows that have no batch_id.
+
+export async function markBatchSeen(batchId: string): Promise<void> {
+  const { error } = await supabase
+    .from('emoji_reactions')
+    .update({ seen_at: new Date().toISOString() })
+    .eq('batch_id', batchId);
+
+  if (error) {
+    console.log('[emojiReactionService] markBatchSeen error:', error);
+  }
+}
+
 // ── FETCH all unseen reactions for a user ─────────────────────
 // Called when the map screen mounts.
 // Gets reactions that arrived while user was offline OR
