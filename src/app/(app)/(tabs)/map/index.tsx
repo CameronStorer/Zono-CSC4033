@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking, AppState } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -40,6 +40,8 @@ type MapFriend = {
   longitude: number;
   avatarUrl: string | null;
   initials: string;
+  isOnline: boolean;
+  lastSeen: string | null;
 };
 
 export default function Map() {
@@ -119,6 +121,45 @@ export default function Map() {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
 
+  useEffect(() => {
+  if (!currentUserId) return;
+
+  async function updatePresence(isOnline: boolean) {
+    await supabase
+      .from('users')
+      .update({
+        is_online: isOnline,
+        last_seen: new Date().toISOString(),
+      })
+      .eq('id', currentUserId);
+      
+  }
+
+  updatePresence(true);
+
+  const interval = setInterval(() => {
+    updatePresence(true);
+  }, 30000);
+
+  const subscription = AppState.addEventListener('change', (state) => {
+    
+    if (state === 'active') {
+      updatePresence(true);
+    }
+
+    if (state == 'background') {
+      updatePresence(false);
+    }
+  });
+
+  return () => {
+    clearInterval(interval);
+    subscription.remove();
+    updatePresence(false);
+  };
+}, [currentUserId]);
+
+
   const profileRef = useRef(profile);
   useEffect(() => {
     profileRef.current = profile;
@@ -153,7 +194,7 @@ export default function Map() {
       if (!ids.length) { setMapFriends([]); return; }
       const { data: users } = await supabase
         .from('users')
-        .select('id, full_name, username, last_lat, last_lng, avatar_url')
+        .select('id, full_name, username, last_lat, last_lng, avatar_url, is_online, last_seen')
         .in('id', ids);
       const located: MapFriend[] = (users ?? [])
         .filter((u: any) => u.last_lat != null && u.last_lng != null)
@@ -171,15 +212,46 @@ export default function Map() {
               .join('')
               .toUpperCase()
               .slice(0, 2),
+            isOnline:
+              Boolean(u.is_online) &&
+              Boolean(u.last_seen) &&
+              Date.now() - new Date(u.last_seen).getTime() < 60000,
+
+            lastSeen: u.last_seen ?? null,
           };
         });
       setMapFriends(located);
-    } catch { /* non-fatal */ }
+    } catch (error) {
+      console.log('loadFriendsForMap error:', error);
   }
+}
 
   useEffect(() => {
     if (profile?.id) loadFriendsForMap(profile.id);
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(() => {
+    loadFriendsForMap(currentUserId);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!selectedFriend) return;
+
+    const updatedFriend = mapFriends.find(
+      (friend) => friend.id === selectedFriend.id
+    );
+
+    if (updatedFriend) {
+      setSelectedFriend(updatedFriend);
+    }
+  }, [mapFriends]);
+
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
   // ── Queue processor ─────────────────────────────────────────
@@ -1027,6 +1099,9 @@ async function flushPendingSticker() {
 
             {/* ── Friend info ── */}
             <Text style={styles.cardTitle}>{selectedFriend.name}</Text>
+            <Text style={{ color: '#ffffff', marginBottom: 4 }}>
+              {selectedFriend.isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}
+            </Text>
             <Text style={{ color: '#ffffff', marginBottom: 4 }}>
               📍 {selectedPlaceName}
             </Text>
