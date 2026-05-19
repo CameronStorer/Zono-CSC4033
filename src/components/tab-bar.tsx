@@ -4,7 +4,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { useAuth } from '@/components/auth-context';
-import { Map, MessageCircle, Sparkles, Settings, Database } from 'lucide-react-native';
+import { Map, Eraser, MessageCircle, Sparkles, Settings, Database } from 'lucide-react-native';
 
 type TabConfig = {
   label: string;
@@ -17,6 +17,7 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   'ai-chat/index':     { label: 'AI Chat',  Icon: Sparkles },
   'settings/index':    { label: 'Settings', Icon: Settings },
   'admin-panel/index': { label: 'Admin',    Icon: Database },
+  'scratch-map/index': { label: 'Scratch Map', Icon: Eraser }
 };
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {

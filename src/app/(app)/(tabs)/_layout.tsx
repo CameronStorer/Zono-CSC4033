@@ -12,6 +12,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="ai-chat/index" />
       <Tabs.Screen name="settings/index" />
       <Tabs.Screen name="admin-panel/index" />
+      <Tabs.Screen name="scratch-map/index.tsx" />
     </Tabs>
   );
 }
