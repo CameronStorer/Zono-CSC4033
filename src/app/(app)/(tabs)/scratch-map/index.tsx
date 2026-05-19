@@ -33,6 +33,12 @@ function cellIdToPolygon(cellId: string): { latitude: number; longitude: number 
   ];
 }
 
+function coordsToCellId(latitude: number, longitude: number): string {
+  const x = Math.floor(longitude / CELL_SIZE_DEG);
+  const y = Math.floor(latitude / CELL_SIZE_DEG);
+  return `${x}_${y}`;
+}
+
 function visibleCellIdsForRegion(region: Region): string[] {
   const halfLat = region.latitudeDelta / 2;
   const halfLng = region.longitudeDelta / 2;
@@ -68,6 +74,8 @@ export default function Map() {
   const [visitedSet, setVisitedSet] = useState<Set<string>>(new Set());
   const mapRef = useRef<MapView>(null);
   const { profile } = useAuth();
+  const lastMarkedCellId = useRef<string | null>(null);
+  const [visitedLoaded, setVisitedLoaded] = useState(false);
 
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
 
@@ -84,6 +92,7 @@ export default function Map() {
       }
       console.log(`scratch-map: loaded ${data?.length ?? 0} visited cells`);
       if (data) setVisitedSet(new Set(data.map(r => r.cell_id)));
+      setVisitedLoaded(true);
     })();
   }, [profile?.id]);
 
@@ -103,6 +112,36 @@ export default function Map() {
     setupLocation();
     return () => { subscription?.remove(); };
   }, []);
+
+  useEffect(() => {
+    if (!userLocation || !profile?.id || !visitedLoaded) return;
+
+    const cellId = coordsToCellId(
+      userLocation.coords.latitude,
+      userLocation.coords.longitude,
+    );
+
+    if (lastMarkedCellId.current === cellId) return;
+    lastMarkedCellId.current = cellId;
+
+    if (visitedSet.has(cellId)) return;
+
+    setVisitedSet(prev => new Set(prev).add(cellId));
+
+    supabase
+      .from('visited_cells')
+      .insert({ user_id: profile.id, cell_id: cellId })
+      .then(({ error }) => {
+        if (error) {
+          console.warn('scratch-map: failed to mark cell visited', error);
+          setVisitedSet(prev => {
+            const next = new Set(prev);
+            next.delete(cellId);
+            return next;
+          });
+        }
+      });
+  }, [userLocation, profile?.id, visitedLoaded]);
 
   const handleRegionChange = useCallback((r: Region) => setRegion(r), []);
 
