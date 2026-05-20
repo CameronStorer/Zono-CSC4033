@@ -11,7 +11,7 @@ eas.json
 android/
 .expo/
 .claude/
-.vscode/
+
 .expo/devices.json
 .expo/types/router.d.ts
 .expo/devices.json
