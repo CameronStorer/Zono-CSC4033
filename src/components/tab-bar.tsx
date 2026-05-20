@@ -12,12 +12,13 @@ type TabConfig = {
 };
 
 const TAB_CONFIG: Record<string, TabConfig> = {
-  'map/index':         { label: 'Map',      Icon: Map },
-  'messages/index':    { label: 'Messages', Icon: MessageCircle },
-  'ai-chat/index':     { label: 'AI Chat',  Icon: Sparkles },
-  'settings/index':    { label: 'Settings', Icon: Settings },
-  'admin-panel/index': { label: 'Admin',    Icon: Database },
-  'scratch-map/index': { label: 'Scratch Map', Icon: Eraser }
+  'map/index':            { label: 'Map',        Icon: Map },
+  'messages/index':       { label: 'Messages',   Icon: MessageCircle },
+  'ai-chat/index':        { label: 'AI Chat',    Icon: Sparkles },
+  'scratch-map/index':    { label: 'Scratch Map', Icon: Eraser },
+  'scratch-map/index.tsx':{ label: 'Scratch Map', Icon: Eraser },
+  'settings/index':       { label: 'Settings',   Icon: Settings },
+  'admin-panel/index':    { label: 'Admin',       Icon: Database },
 };
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {

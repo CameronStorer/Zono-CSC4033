@@ -13,6 +13,7 @@ export default function AppLayout() {
             headerShown: false,
             presentation: 'transparentModal',
             gestureEnabled: true,
+            gestureDirection: 'vertical',
             animation: 'slide_from_bottom',
           }}
         />
@@ -23,6 +24,7 @@ export default function AppLayout() {
             headerShown: false,
             presentation: 'transparentModal',
             gestureEnabled: true,
+            gestureDirection: 'vertical',
             animation: 'slide_from_bottom',
           }}
         />
