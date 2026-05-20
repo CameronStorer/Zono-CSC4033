@@ -17,12 +17,25 @@ export const DATABASE_CONFIG = {
       bio: 150,
       status: 100, 
     } as Record<string, number>
+  },
+  reports: {
+    label: 'Reports',
+    table: 'reports',
+    showColumns: ['report_id', 'created_at', 'reporter_id', 'reported_id', 'report_reason', 'report_status',] as const,
+    widths: { 
+      report_id: 80, 
+      created_at: 180, 
+      reporter_id: 120, 
+      reported_id: 120,
+      report_reason: 140,
+      report_status: 140,
+    } as Record<string, number>
   }
 };
 
 // logic to select everything from a table in the SupaBase DB
 export const fetchTableData = async (tableName: string) => {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin // this is ok because only an admin can have access to this functionality anyways
     .from(tableName)
     .select('*')
     .order('created_at', { ascending: true });

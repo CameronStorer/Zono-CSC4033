@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   pageTitle: { 
     fontSize: 24, 
     fontWeight: 'bold', 
-    color: '#fff',
+    color: '#fff' 
   },
   addButton: { 
     backgroundColor: '#6200ee', 
@@ -96,5 +96,60 @@ export const styles = StyleSheet.create({
         elevation: 3,
       },
     }),
+  },
+  overlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.85)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  content: { 
+    backgroundColor: '#16161d', 
+    padding: 25, 
+    borderRadius: 20, 
+    width: '90%', 
+    maxWidth: 400, 
+    borderWidth: 1, 
+    borderColor: '#333' 
+  },
+  title: { 
+    color: '#fff', 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    marginBottom: 20 
+  },
+  // container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+    statusText: {
+    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  switchTrack: {
+    width: 60,
+    height: 34,
+    borderRadius: 17, // Half of height to make it a pill shape
+    padding: 2,        // Space between track edge and thumb
+    justifyContent: 'center',
+  },
+  thumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13, // Half of width to make it a circle
+    backgroundColor: 'white',
+    // Add a little shadow to make the thumb "pop"
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 4, // For Android shadow
   },
 });

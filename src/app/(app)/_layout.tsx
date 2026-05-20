@@ -1,20 +1,32 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 import { TabNavProvider } from '@/contexts/tab-nav-context';
-import CustomTabBar from '@/components/tab-bar';
 
 export default function AppLayout() {
   return (
     <TabNavProvider>
-      <Tabs
-        tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{ headerShown: false }}
-      >
-        <Tabs.Screen name="map/index" />
-        <Tabs.Screen name="messages/index" />
-        <Tabs.Screen name="ai-chat/index" />
-        <Tabs.Screen name="settings/index" />
-        <Tabs.Screen name="admin-panel/index" />
-      </Tabs>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+
+        <Stack.Screen
+          name="profile/index"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            gestureEnabled: true,
+            animation: 'slide_from_bottom',
+          }}
+        />
+
+        <Stack.Screen
+          name="profile/[id]"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            gestureEnabled: true,
+            animation: 'slide_from_bottom',
+          }}
+        />
+      </Stack>
     </TabNavProvider>
   );
 }

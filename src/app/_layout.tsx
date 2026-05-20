@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider } from '@/components/auth-context';
 import { supabase } from '@/components/supabase';
 import { AppThemeProvider, useAppTheme } from '@/contexts/theme-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RouteGuard() {
   const router = useRouter();
@@ -19,7 +20,7 @@ function RouteGuard() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const inApp = segmentsRef.current[0] === '(app)';
       if (event === 'SIGNED_IN' && session && !inApp) {
-        router.replace('/(app)/map');
+        router.replace('/(app)/(tabs)/map');
       } else if (event === 'SIGNED_OUT' && inApp) {
         router.replace('/(login)');
       }
@@ -48,10 +49,12 @@ function InnerLayout() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AppThemeProvider>
-        <InnerLayout />
-      </AppThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>  
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <InnerLayout />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView> 
   );
 }

@@ -1,16 +1,16 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Linking, AppState } from 'react-native';
+import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { getDistanceMeters, formatDistance } from '@/utils/distance';
 import { searchUserByUserName, sendFriendRequest, cancelFriendRequest} from '@/services/friendService';
 import type { UserLocation as FriendSearchUser } from '@/types/friend';
-import { makeStyles } from '@/app/(app)/map/_styles';
-import ProfileModal from '@/components/ProfileModal';
+import { makeStyles } from '@/app/(app)/(tabs)/map/_styles';
 import FriendRequestNotificationModal from '@/components/FriendRequestNotificationModal';
 import { updateUserLocation } from '@/services/profileService';
-import { supabase } from '@/components/supabase'; // tia
+import { supabase } from '@/components/supabase'; 
 import { useAuth } from '@/components/auth-context';
 import UserMarker from '@/components/user-marker';
 import {getIncomingFriendRequests,acceptFriendRequest,deleteFriendRequest,} from '@/services/notificationService';
@@ -18,6 +18,20 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { darkMapStyle } from '@/constants/map-styles';
 import { SlideScreen } from '@/components/slide-screen';
 import FriendJoinedModal from '@/components/FriendJoinedModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// ── Sticker feature imports ──────────────────────────────────
+import EmojiPickerSheet from '@/components/emoji/emojiPickerSheet';
+import FlyingStickerLayer from '@/components/emoji/FlyingStickerLayer';
+import IncomingStickerOverlay, { SenderInfo } from '@/components/emoji/IncomingStickerOverlay';
+import {
+  sendEmojiReaction,
+  subscribeToIncomingEmojiReactions,
+  markReactionSeen,
+  markBatchSeen,
+  getUnseenEmojiReactions,
+} from '@/services/emojiReactionService';
+import { EmojiReaction } from '@/types/emojiReaction';
+import { StickerItem } from '@/data/stickers';
 
 type MapFriend = {
   id: string;
@@ -26,10 +40,13 @@ type MapFriend = {
   longitude: number;
   avatarUrl: string | null;
   initials: string;
+  isOnline: boolean;
+  lastSeen: string | null;
 };
 
 export default function Map() {
   const { colors: C, resolved } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(C), [resolved]);
 
   // the current selected friend, then use the function, base on select state
@@ -60,6 +77,39 @@ export default function Map() {
   //Blocked
   const [blockedIds, setBlockedIds] = useState<number[]>([]);
 
+  // ── Sticker feature state ────────────────────────────────────
+
+  const [stickerSheetVisible, setStickerSheetVisible] = useState(false);
+
+  const [flyingStickers, setFlyingStickers] = useState<Array<{
+    id: string;
+    sticker: StickerItem;
+    sizeMultiplier: number;
+    targetX: number;
+    targetY: number;
+  }>>([]);
+
+  // Queue: reactions waiting to be shown (oldest first)
+  const [reactionQueue, setReactionQueue] = useState<EmojiReaction[]>([]);
+  const [queueDrainTick, setQueueDrainTick] = useState(0);
+
+  // Currently displayed reaction (null = overlay hidden)
+  const [currentReaction, setCurrentReaction] = useState<EmojiReaction | null>(null);
+  const [currentSender, setCurrentSender]     = useState<SenderInfo | null>(null);
+
+  // Prevents showing two overlays at the same time
+  const isShowingReaction = useRef(false);
+  const queuedReactionIds = useRef<Set<string>>(new Set());
+
+  // ── Sticker debounce refs ─────────────────────────────────────
+  // Collects rapid taps and sends ONE reaction after 1.5s of silence
+  const stickerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStickerRef  = useRef<{
+    sticker: StickerItem;
+    count: number;
+    sizeMultiplier: number;
+  } | null>(null);
+
   // useMemo : only recompute distance text when selected friend change
   const distanceText = useMemo( () => {
     if (!selectedFriend) return '';
@@ -67,15 +117,49 @@ export default function Map() {
     return formatDistance(meters);
   }, [selectedFriend]); //recompute distance text when we have selected friend
 
-  //User Profile use to manipulate the pop-up modal
-  const [profileVisible, setProfileVisible] = useState(false);
+  // Current logged-in user profile
   const { profile } = useAuth();
-  // replace this with your real logged-in user id later if needed
-  //const currentUserId = Number(currentUser.id ?? 1);
   const currentUserId = profile?.id;
 
-  // prevents user from being null by loading the profile before mount so last_lat and last_lon are written to
-  // keep a ref so the watchPositionAsync callback always sees the latest profile
+  useEffect(() => {
+  if (!currentUserId) return;
+
+  async function updatePresence(isOnline: boolean) {
+    await supabase
+      .from('users')
+      .update({
+        is_online: isOnline,
+        last_seen: new Date().toISOString(),
+      })
+      .eq('id', currentUserId);
+      
+  }
+
+  updatePresence(true);
+
+  const interval = setInterval(() => {
+    updatePresence(true);
+  }, 30000);
+
+  const subscription = AppState.addEventListener('change', (state) => {
+    
+    if (state === 'active') {
+      updatePresence(true);
+    }
+
+    if (state == 'background') {
+      updatePresence(false);
+    }
+  });
+
+  return () => {
+    clearInterval(interval);
+    subscription.remove();
+    updatePresence(false);
+  };
+}, [currentUserId]);
+
+
   const profileRef = useRef(profile);
   useEffect(() => {
     profileRef.current = profile;
@@ -92,15 +176,15 @@ export default function Map() {
     }
   }, [profile?.id]);
 
-  useEffect(() => {
-    if (currentUserId) {
-      loadIncomingRequests();
-    }
-  }, [currentUserId]);
+    useEffect(() => {
+      if (currentUserId) {
+        loadIncomingRequests();
+      }
+    }, [currentUserId]);
 
   // Fetches the latest lat/lng + avatar for every friend and updates map markers.
   // Called on mount and every 10 s from the watchPositionAsync callback.
-  async function loadFriendsForMap(userId: string) {
+  async function loadFriendsForMap(userId: number) {
     try {
       const { data: rows } = await supabase
         .from('friendships')
@@ -110,7 +194,7 @@ export default function Map() {
       if (!ids.length) { setMapFriends([]); return; }
       const { data: users } = await supabase
         .from('users')
-        .select('id, full_name, username, last_lat, last_lng, avatar_url')
+        .select('id, full_name, username, last_lat, last_lng, avatar_url, is_online, last_seen')
         .in('id', ids);
       const located: MapFriend[] = (users ?? [])
         .filter((u: any) => u.last_lat != null && u.last_lng != null)
@@ -128,17 +212,95 @@ export default function Map() {
               .join('')
               .toUpperCase()
               .slice(0, 2),
+            isOnline:
+              Boolean(u.is_online) &&
+              Boolean(u.last_seen) &&
+              Date.now() - new Date(u.last_seen).getTime() < 60000,
+
+            lastSeen: u.last_seen ?? null,
           };
         });
       setMapFriends(located);
-    } catch { /* non-fatal */ }
+    } catch (error) {
+      console.log('loadFriendsForMap error:', error);
   }
+}
 
   useEffect(() => {
     if (profile?.id) loadFriendsForMap(profile.id);
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(() => {
+    loadFriendsForMap(currentUserId);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!selectedFriend) return;
+
+    const updatedFriend = mapFriends.find(
+      (friend) => friend.id === selectedFriend.id
+    );
+
+    if (updatedFriend) {
+      setSelectedFriend(updatedFriend);
+    }
+  }, [mapFriends]);
+
   const initials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?';
   
+  // ── Queue processor ─────────────────────────────────────────
+  // Fires when queue changes OR when queueDrainTick increments
+  // (queueDrainTick is bumped by handleReactionComplete so the
+  //  effect re-runs even though reactionQueue itself did not change).
+  useEffect(() => {
+    if (isShowingReaction.current) return;
+    if (reactionQueue.length === 0) return;
+
+    const [next, ...rest] = reactionQueue;
+    setReactionQueue(rest);
+    isShowingReaction.current = true;
+    resolveSenderAndShow(next);
+  }, [reactionQueue, queueDrainTick]);
+
+  // ── Fetch unseen reactions + subscribe to Realtime ───────────
+  // A: Fetch from DB on mount → catches offline/missed reactions
+  // B: Realtime → instant delivery while user is online
+  // Both add to the queue — processor handles display order
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    // A. Fetch unseen reactions from database (offline inbox)
+    getUnseenEmojiReactions(currentUserId)
+      .then((unseen) => {
+        const fresh = unseen.filter((r) => {
+          if (queuedReactionIds.current.has(r.id)) return false;
+          queuedReactionIds.current.add(r.id);
+          return true;
+        });
+        if (fresh.length > 0) {
+          setReactionQueue((prev) => [...prev, ...fresh]);
+        }
+      })
+      .catch((err) => console.log('[Map] getUnseenEmojiReactions error:', err));
+
+    // B. Listen for new reactions via Realtime (online delivery)
+    const unsubscribe = subscribeToIncomingEmojiReactions(
+      currentUserId,
+      (reaction) => {
+        if (queuedReactionIds.current.has(reaction.id)) return;
+        queuedReactionIds.current.add(reaction.id);
+        setReactionQueue((prev) => [...prev, reaction]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUserId]);
 
   // function get the name of place, async- get data from server
   async function handleFriendPress(friend: MapFriend) {
@@ -288,24 +450,28 @@ export default function Map() {
       }
   }
   async function handleAddFriend(targetUserId: number) {
-  if (!currentUserId){
-    console.log("No log in user found");
-    return;
-  }
-  try{
-    await sendFriendRequest(currentUserId,targetUserId);
-    setRequestedIds((prevRequestId) =>[...prevRequestId, targetUserId]);
-  }catch (error){
-    console.log("send friend request error", error);
-  }
-  }
-  async function handleCancelRequest(targetUserId: number) {
-    if (!currentUserId) return;
+      if (!currentUserId) return;
 
+      setRequestedIds((prev) => [...prev, targetUserId]);
+
+      try {
+        await sendFriendRequest(currentUserId, targetUserId);
+
+      } catch (error: any) {
+        if (error?.code === '23505') {
+          return;
+        }
+
+        // Real unexpected error — revert the optimistic update
+        setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
+        console.log('send friend request error', error);
+      }
+    }
+    async function handleCancelRequest(targetUserId: number) {
+    if (!currentUserId) return;
     try {
       await cancelFriendRequest(currentUserId, targetUserId);
-
-      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId ));
+      setRequestedIds((prev) => prev.filter((id) => id !== targetUserId));
     } catch (error) {
       console.log('cancel friend request error:', error);
     }
@@ -367,7 +533,7 @@ export default function Map() {
   try {
 
     // delete the friendship row from supabase
-    const { error } = await supabase
+    const { error:error1 } = await supabase
       .from('friendships')
       .delete()
       .eq('user_id', currentUserId)
@@ -375,8 +541,19 @@ export default function Map() {
 
 
     // if supabase throws an error, throw the error on the app
-    if (error) {
-      console.log('unfollow error:', error);
+    if (error1) {
+      console.log('unfollow error:', error1);
+      return;
+    }
+    // Delete their side
+    const { error: error2 } = await supabase
+      .from('friendships')
+      .delete()
+      .eq('user_id', targetUserId)
+      .eq('friend_id', currentUserId);
+
+    if (error2) {
+      console.log('unfollow error (their side):', error2);
       return;
     }
 
@@ -449,6 +626,153 @@ export default function Map() {
     setIsSearching(false);
   }
 
+// ── STICKER FUNCTIONS ─────────────────────────────────────────
+
+// Called every time user taps a sticker.
+// Does NOT send immediately — waits 1.5s for more taps.
+// If same sticker is tapped again before timer fires → increments count.
+// If different sticker is tapped → flushes previous, starts new.
+function handleSendSticker(sticker: StickerItem, sizeMultiplier: number) {
+  if (!currentUserId || !selectedFriend) return;
+
+  // flying animation IMMEDIATELY on every tap
+  launchFlyingSticker(sticker, sizeMultiplier);
+
+  const pending = pendingStickerRef.current;
+
+  if (pending && pending.sticker.id === sticker.id) {
+    // Same sticker tapped again — just increment the count
+    pendingStickerRef.current = {
+      sticker,
+      count: pending.count + 1,
+      // Keep the highest sizeMultiplier seen (in case of mixed tap/hold)
+      sizeMultiplier: Math.max(pending.sizeMultiplier, sizeMultiplier),
+    };
+  } else {
+    // Different sticker — flush whatever was pending first
+    if (pending) flushPendingSticker();
+
+    // Start collecting for this new sticker
+    pendingStickerRef.current = { sticker, count: 1, sizeMultiplier };
+  }
+
+  // Reset the 1.5s timer on every tap
+  if (stickerDebounceRef.current) clearTimeout(stickerDebounceRef.current);
+  stickerDebounceRef.current = setTimeout(() => {
+    flushPendingSticker();
+  }, 1500);
+}
+
+// Sends the accumulated pending sticker reaction to Supabase.
+// Called either when the 1.5s timer fires OR a different sticker is tapped.
+async function flushPendingSticker() {
+  const pending = pendingStickerRef.current;
+  if (!pending || !currentUserId || !selectedFriend) return;
+
+  // Clear refs immediately so a new tap can start a new batch
+  pendingStickerRef.current  = null;
+  stickerDebounceRef.current = null;
+
+  try {
+    await sendEmojiReaction({
+      sender_id:      currentUserId,
+      receiver_id:    Number(selectedFriend.id),
+      sticker_id:     pending.sticker.id,
+      sticker_label:  pending.sticker.label,
+      size_multiplier: pending.sizeMultiplier,
+      count:          pending.count,           // ← the real count!
+      sender_lat:     userLocation?.coords.latitude  ?? null,
+      sender_lng:     userLocation?.coords.longitude ?? null,
+    });
+
+  } catch (error) {
+    console.log('[Map] flushPendingSticker error:', error);
+  }
+}
+  // Converts the friend's lat/lng to screen pixels using the map ref,
+  // then sets state so FlyingStickerLayer renders and animates.
+  async function launchFlyingSticker(sticker: StickerItem, sizeMultiplier: number) {
+    if (!mapRef.current || !selectedFriend) return;
+    try {
+      const point = await mapRef.current.pointForCoordinate({
+        latitude: selectedFriend.latitude,
+        longitude: selectedFriend.longitude,
+      });
+      if (point.x === 0 && point.y === 0) return; // guard: map not ready
+      const id = `${Date.now()}-${Math.random()}`;  // unique key per animation
+      setFlyingStickers((prev) => [...prev, { id, sticker, sizeMultiplier, targetX: point.x, targetY: point.y }]);
+    } catch (error) {
+      console.log('[Map] launchFlyingSticker error:', error);
+    }
+  }
+  // ── Looks up sender profile then shows the overlay ───────────
+  // Called by the queue processor for each reaction in the queue.
+  async function resolveSenderAndShow(reaction: EmojiReaction) {
+    // Check mapFriends first — no network call needed
+    const friendOnMap = mapFriends.find(
+      (f) => Number(f.id) === reaction.sender_id
+    );
+
+    if (friendOnMap) {
+      setCurrentSender({
+        username: friendOnMap.name,
+        full_name: friendOnMap.name,
+        avatar_url: friendOnMap.avatarUrl,
+      });
+    } else {
+      // Not a friend on map — fetch from Supabase
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('username, full_name, avatar_url')
+          .eq('id', reaction.sender_id)
+          .single();
+        setCurrentSender({
+          username: data?.username ?? 'Someone',
+          full_name: data?.full_name ?? null,
+          avatar_url: data?.avatar_url ?? null,
+        });
+      } catch {
+        setCurrentSender({
+          username: 'Someone',
+          full_name: null,
+          avatar_url: null,
+        });
+      }
+    }
+
+    // Zoom map to sender location if shared
+    if (reaction.sender_lat && reaction.sender_lng) {
+      mapRef.current?.animateToRegion(
+        {
+          latitude: reaction.sender_lat,
+          longitude: reaction.sender_lng,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        800
+      );
+    }
+
+    setCurrentReaction(reaction);
+  }
+
+  // ── Called when IncomingStickerOverlay finishes animating ─────
+  // Marks reaction seen, hides overlay, allows queue to continue.
+  function handleReactionComplete() {
+    if (currentReaction) {
+      if (currentReaction.batch_id) {
+        markBatchSeen(currentReaction.batch_id);
+      } else {
+        markReactionSeen(currentReaction.id);  // legacy rows with no batch_id
+      }
+      queuedReactionIds.current.delete(currentReaction.id);  // Fix 2
+    }
+    setCurrentReaction(null);
+    setCurrentSender(null);
+    isShowingReaction.current = false;
+    setQueueDrainTick((t) => t + 1);  // Fix 1
+  }
   // query the user for their location 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -580,7 +904,7 @@ export default function Map() {
         {/* add profile button */}
         <TouchableOpacity
           style={styles.profileCircle}
-          onPress={() => setProfileVisible(true)}
+          onPress={() => router.push('/profile')}
           activeOpacity={0.8}
         >
           {profile?.avatar_url
@@ -728,12 +1052,6 @@ export default function Map() {
           </View>
         </Modal>
 
-        <ProfileModal
-          visible={profileVisible}
-          onClose={() => setProfileVisible(false)}
-          profile={profile}
-        />
-
         <FriendRequestNotificationModal
           visible={notificationVisible}
           onClose={() => setNotificationVisible(false)}
@@ -751,11 +1069,102 @@ export default function Map() {
         />
 
         {selectedFriend && (
-          <View style={styles.bottomCard}>
+          <View
+            style={[
+              styles.bottomCard,
+              {
+                // Push the card above the tab bar:
+                bottom: insets.bottom + 90,
+              },
+            ]}
+          >
+            {/* ── Close button ── */}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedFriend(null);
+                setSelectedPlaceName('');
+                setStickerSheetVisible(false); // close sticker sheet too if open
+              }}
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 10,
+                padding: 4,
+                zIndex: 10,
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }}>✕</Text>
+            </TouchableOpacity>
+
+            {/* ── Friend info ── */}
             <Text style={styles.cardTitle}>{selectedFriend.name}</Text>
-            <Text style={{ color: '#ffffff', marginBottom: 4 }}>📍 {selectedPlaceName}</Text>
+            <Text style={{ color: '#ffffff', marginBottom: 4 }}>
+              {selectedFriend.isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}
+            </Text>
+            <Text style={{ color: '#ffffff', marginBottom: 4 }}>
+              📍 {selectedPlaceName}
+            </Text>
             <Text style={{ color: '#ffffff' }}>Distance: {distanceText}</Text>
+
+            {/* ── Send Sticker button ── */}
+            <TouchableOpacity
+              onPress={() => setStickerSheetVisible(true)}
+              style={{
+                marginTop: 10,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                borderRadius: 12,
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                alignSelf: 'flex-start',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                🎯 Send Sticker
+              </Text>
+            </TouchableOpacity>
           </View>
+        )}
+        {/* ── STICKER PICKER SHEET ──────────────────────── */}
+        <EmojiPickerSheet
+          visible={stickerSheetVisible}
+          friend={
+            selectedFriend
+              ? {
+                  id: Number(selectedFriend.id),
+                  username: selectedFriend.name,
+                  full_name: selectedFriend.name,
+                  avatar_url: selectedFriend.avatarUrl,
+                }
+              : null
+          }
+          onSend={handleSendSticker}
+          onClose={() => setStickerSheetVisible(false)}
+        />
+
+        {/* ── FLYING STICKER (sender side) ──────────────── */}
+        {flyingStickers.map((fs) => (
+          <FlyingStickerLayer
+            key={fs.id}
+            sticker={fs.sticker}
+            sizeMultiplier={fs.sizeMultiplier}
+            targetX={fs.targetX}
+            targetY={fs.targetY}
+            onComplete={() =>
+              setFlyingStickers((prev) => prev.filter((s) => s.id !== fs.id))
+            }
+          />
+        ))}
+
+        {/* ── INCOMING STICKER OVERLAY (receiver side) ──── */}
+        {currentReaction && currentSender && (
+          <IncomingStickerOverlay
+            reaction={currentReaction}
+            senderInfo={currentSender}
+            onComplete={handleReactionComplete}
+          />
         )}
       </View>
     </SlideScreen>
