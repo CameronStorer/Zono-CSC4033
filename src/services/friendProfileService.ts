@@ -16,7 +16,7 @@ export type FriendProfilePreview = UserProfile & {
 };
 
 const USER_SELECT =
-  'id, uid, username, full_name, bio, avatar_url, email, phone_number, status, last_online, location_sharing, last_lat, last_lng';
+  'id, uid, username, full_name, bio, avatar_url, email, phone_number, status, last_online, is_online, last_seen, location_sharing, last_lat, last_lng';
 
 export async function getUserProfileById(userId: number): Promise<UserProfile> {
   const { data, error } = await supabase

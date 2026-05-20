@@ -11,6 +11,8 @@ export type UserProfile = {
     phone_number: string | null;
     status: string | null;
     last_online: string | null;
+    is_online: boolean | null;
+    last_seen: string | null;
     location_sharing: string | null;
     last_lat: number | null;
     last_lng: number | null;
@@ -31,7 +33,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile |null>{
     const {data, error} = await supabase
         .from('users')
         .select(
-        'id, uid, username, full_name, bio, avatar_url, email, phone_number, status, last_online, location_sharing, last_lat, last_lng')
+        'id, uid, username, full_name, bio, avatar_url, email, phone_number, status, last_online, is_online, last_seen, location_sharing, last_lat, last_lng')
         .eq('uid', user.id)
         .single(); // will return exactly 1 row from the users table 
     

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Dimensions } from 'react-native';
 import { MarkdownResponse } from '@/components/markdown-response';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,55 +7,74 @@ import { SlideScreen } from '@/components/slide-screen';
 import { supabase } from '@/components/supabase';
 import { useAuth } from '@/components/auth-context';
 import { OLLAMA_BASE_URL, OLLAMA_MODEL, OLLAMA_AUTH_TOKEN } from '@/constants/ai';
+import { router } from 'expo-router';
+import { getDistanceMeters, formatDistance, compassBearing } from '@/utils/distance';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = (SCREEN_W - 48 - 10) / 2;
 
 type Prompt = { id: string; label: string; icon: string; question: string };
 type FriendInfo = {
-  full_name: string; username: string; status: string | null;
-  last_online: string | null; bio: string | null;
+  id: number; full_name: string; username: string; status: string | null;
+  last_seen: string | null; is_online: boolean | null; bio: string | null;
   last_lat: number | null; last_lng: number | null;
 };
 
 const PROMPTS: Prompt[] = [
   {
-    id: 'hot',
-    label: 'Hot places\namong friends',
-    icon: '🔥',
-    question: 'Based on my friends\' recent locations, which areas seem most popular right now? Give a brief, fun summary.',
-  },
-  {
-    id: 'go',
-    label: 'Where should\nI go?',
-    icon: '🗺️',
-    question: 'Looking at where my friends currently are, where would be a good spot for me to go to hang out?',
-  },
-  {
-    id: 'online',
-    label: "Who's online\nright now?",
-    icon: '🟢',
-    question: 'Which of my friends are currently online or were active in the last hour? List them and when they were last seen.',
-  },
-  {
-    id: 'activities',
-    label: 'Friend activities\n& hobbies',
-    icon: '🎯',
-    question: 'Based on my friends\' bios and profiles, what activities do they seem to enjoy most? Give a fun breakdown.',
-  },
-  {
-    id: 'summary',
-    label: 'Summarize my\nfriend group',
-    icon: '👥',
-    question: 'Give me a short, fun summary of my friend group\'s vibe based on their profiles.',
+    id: 'whatsup',
+    label: "What are my\nfriends up to?",
+    icon: '👀',
+    question: "Based on where each friend is, what they're near (restaurants, parks, etc.), their bios, and statuses — give me a fun rundown of what everyone seems to be up to right now.",
   },
   {
     id: 'closest',
-    label: "Who's closest\nto me?",
+    label: "Who's nearest\nto me?",
+    icon: '🏃',
+    question: "The context lists friends sorted nearest-first with rank numbers and exact distances in metres. Use those values to rank all my friends from nearest to farthest — show each person's formatted distance and direction.",
+  },
+  {
+    id: 'hangout',
+    label: 'Who should\nI hang with?',
+    icon: '🤝',
+    question: "Looking at who's online, how close they are, what places they're near, and their bios — which one friend is the best pick to hang out with right now and why?",
+  },
+  {
+    id: 'meetup',
+    label: 'Plan a\nmeetup spot',
     icon: '📍',
-    question: 'Based on the coordinates, which of my friends is geographically closest to my current location?',
+    question: "Based on where my friends are and what's nearby (restaurants, cafes, parks), suggest the best central meetup spot that works for the group. Factor in who's currently online.",
+  },
+  {
+    id: 'group',
+    label: 'Describe my\nfriend group',
+    icon: '👥',
+    question: "Give me a fun, creative description of my friend group — their collective vibe, what they seem to be into based on bios and statuses, what kind of crew they are, and any fun observations.",
+  },
+  {
+    id: 'quiet',
+    label: "Who's gone\nquiet?",
+    icon: '👻',
+    question: "Which friends have been offline the longest? Give me a playful check-in list using their actual last-active times so I know who to reach out to.",
   },
 ];
+
+function friendActivityLabel(isOnline: boolean | null, lastSeen: string | null): string {
+  const now = Date.now();
+  const secs = lastSeen
+    ? Math.round((now - new Date(lastSeen).getTime()) / 1000)
+    : null;
+
+  if (isOnline === true && secs != null && secs < 90) return 'online now';
+  if (secs == null) return 'last seen: unknown';
+  const mins = Math.round(secs / 60);
+  if (mins < 2) return 'last active just now';
+  if (mins < 60) return `last active ${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `last active ${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `last active ${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 function buildContext(
   me: { lat: number | null; lng: number | null },
@@ -63,46 +82,82 @@ function buildContext(
   poiMap: Record<string, string> = {},
 ): string {
   const now = new Date();
+
+  // Pre-compute distances so we can sort and give the AI exact metre values
+  type WithDist = FriendInfo & { distMeters: number | null };
+  const withDist: WithDist[] = friends.map(f => ({
+    ...f,
+    distMeters:
+      f.last_lat != null && f.last_lng != null && me.lat != null && me.lng != null
+        ? getDistanceMeters(
+            { latitude: me.lat, longitude: me.lng },
+            { latitude: f.last_lat, longitude: f.last_lng },
+          )
+        : null,
+  }));
+
+  // Sort nearest-first; friends with no location go to the end
+  withDist.sort((a, b) => {
+    if (a.distMeters == null && b.distMeters == null) return 0;
+    if (a.distMeters == null) return 1;
+    if (b.distMeters == null) return -1;
+    return a.distMeters - b.distMeters;
+  });
+
   const lines: string[] = [
-    `Current user location: ${me.lat != null ? `${me.lat.toFixed(4)}, ${me.lng!.toFixed(4)}` : 'unknown'}`,
     `Current time: ${now.toLocaleString()}`,
     '',
-    `Friends (${friends.length} total):`,
+    `Friends (${friends.length} total, listed nearest-first):`,
   ];
-  for (const f of friends) {
-    const mins = f.last_online
-      ? Math.round((now.getTime() - new Date(f.last_online).getTime()) / 60000)
-      : null;
-    const lastSeen = mins != null ? `last seen ${mins} min ago` : 'last seen unknown';
-    const loc = f.last_lat != null ? `at ${f.last_lat.toFixed(4)}, ${f.last_lng!.toFixed(4)}` : 'location unknown';
-    const bio = f.bio ? `bio: "${f.bio}"` : 'no bio';
-    const nearby = poiMap[f.username] ? `, currently near: ${poiMap[f.username]}` : '';
-    lines.push(`- ${f.full_name} (@${f.username}): status=${f.status ?? 'unknown'}, ${lastSeen}, ${loc}, ${bio}${nearby}`);
+
+  for (let i = 0; i < withDist.length; i++) {
+    const f = withDist[i];
+    const activity = friendActivityLabel(f.is_online, f.last_seen);
+
+    let locationStr: string;
+    if (f.distMeters != null && me.lat != null && me.lng != null) {
+      const dir = compassBearing(me.lat, me.lng, f.last_lat!, f.last_lng!);
+      // Include both human-readable distance AND raw metres so ranking is unambiguous
+      locationStr = `${formatDistance(f.distMeters)} ${dir} from you (${Math.round(f.distMeters)} m)`;
+    } else {
+      locationStr = 'location unknown';
+    }
+
+    const parts: string[] = [`distance rank #${i + 1}`, activity, locationStr];
+    if (f.bio) parts.push(`bio: "${f.bio}"`);
+    if (f.status) parts.push(`status: "${f.status}"`);
+    if (poiMap[f.username]) parts.push(`currently near: ${poiMap[f.username]}`);
+    lines.push(`- ${f.full_name}: ${parts.join(', ')}`);
   }
   return lines.join('\n');
 }
 
-// Queries OpenStreetMap Overpass API for named amenities/shops within the
-// bounding box of all friend locations, then matches each friend to the
-// closest POI within 150 m.
+// Queries OpenStreetMap Overpass API for named places (restaurants, cafes,
+// bars, shops, parks, etc.) near all friend locations and matches each friend
+// to the closest place within 300 m. Returns a map of username → rich label
+// like "Chipotle (fast_food, mexican)" so the AI has food/venue context.
 async function fetchNearbyPOI(friends: FriendInfo[]): Promise<Record<string, string>> {
   const located = friends.filter(f => f.last_lat != null && f.last_lng != null);
   if (!located.length) return {};
 
   const lats = located.map(f => f.last_lat!);
   const lngs = located.map(f => f.last_lng!);
-  const pad = 0.004; // ~450 m padding so edge friends get coverage
+  const pad = 0.005; // ~550 m padding so edge friends get full coverage
   const s = (Math.min(...lats) - pad).toFixed(6);
   const n = (Math.max(...lats) + pad).toFixed(6);
   const w = (Math.min(...lngs) - pad).toFixed(6);
   const e = (Math.max(...lngs) + pad).toFixed(6);
 
+  // Fetch nodes (small POIs) and ways (large venues like malls/restaurants)
+  // "out center" on ways gives us a centroid coordinate
   const query =
-    `[out:json][timeout:20];` +
+    `[out:json][timeout:25];` +
     `(node["name"]["amenity"](${s},${w},${n},${e});` +
     `node["name"]["shop"](${s},${w},${n},${e});` +
-    `node["name"]["leisure"](${s},${w},${n},${e}););` +
-    `out body;`;
+    `node["name"]["leisure"](${s},${w},${n},${e});` +
+    `node["name"]["tourism"](${s},${w},${n},${e});` +
+    `way["name"]["amenity"](${s},${w},${n},${e}););` +
+    `out center;`;
 
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
@@ -112,20 +167,37 @@ async function fetchNearbyPOI(friends: FriendInfo[]): Promise<Record<string, str
   if (!res.ok) return {};
 
   const json = await res.json();
-  type OsmNode = { lat: number; lon: number; tags: Record<string, string> };
-  const pois: OsmNode[] = (json.elements ?? []).filter((el: any) => el.tags?.name);
+  type OsmElement = {
+    lat?: number; lon?: number;
+    center?: { lat: number; lon: number };
+    tags: Record<string, string>;
+  };
+  const pois: OsmElement[] = (json.elements ?? []).filter((el: any) => el.tags?.name);
 
   const result: Record<string, string> = {};
   for (const f of located) {
     let bestName = '';
-    let bestDist = 150; // metres — only tag if within this radius
+    let bestTags: Record<string, string> = {};
+    let bestDist = 300; // metres — expanded radius for restaurant coverage
     for (const poi of pois) {
-      const dLat = (f.last_lat! - poi.lat) * 111_320;
-      const dLng = (f.last_lng! - poi.lon) * 111_320 * Math.cos(f.last_lat! * Math.PI / 180);
-      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-      if (dist < bestDist) { bestDist = dist; bestName = poi.tags.name; }
+      const poiLat = poi.lat ?? poi.center?.lat;
+      const poiLon = poi.lon ?? poi.center?.lon;
+      if (poiLat == null || poiLon == null) continue;
+      const dist = getDistanceMeters(
+        { latitude: f.last_lat!, longitude: f.last_lng! },
+        { latitude: poiLat, longitude: poiLon },
+      );
+      if (dist < bestDist) { bestDist = dist; bestName = poi.tags.name; bestTags = poi.tags; }
     }
-    if (bestName) result[f.username] = bestName;
+    if (bestName) {
+      const type = bestTags.amenity || bestTags.shop || bestTags.leisure || bestTags.tourism || '';
+      // cuisine tag can contain multiple values separated by ";"
+      const cuisine = bestTags.cuisine
+        ? bestTags.cuisine.split(';').map(s => s.trim()).slice(0, 2).join('/')
+        : '';
+      const detail = [type, cuisine].filter(Boolean).join(', ');
+      result[f.username] = detail ? `${bestName} (${detail})` : bestName;
+    }
   }
   return result;
 }
@@ -191,11 +263,12 @@ function streamOllama(
           content:
             'You are Zono AI, a fun social assistant inside the Zono friend-tracking app. ' +
             'Answer using ONLY the context provided — never invent or guess anything not explicitly there; if unknown, say so. ' +
-            'When describing where someone is, use the nearest business, town, or landmark — NEVER output raw GPS coordinates, latitude and longitude, or decimal numbers. ' +
+            'CRITICAL: Never mention latitude, longitude, coordinates, decimal degree values, or usernames (like @handle) — ever. Describe locations using distance and direction (e.g. "0.3 mi north of you") or a nearby place name only. ' +
             'If the context shows a friend is "currently near" a specific place (like a restaurant, store, or venue), mention that place by name naturally in your response. ' +
+            'Use the "last active" time in the context to accurately describe how recently someone was online. Distinguish clearly between "online now", recent activity (minutes), and long inactivity (hours or days). ' +
             'Keep every response very short: 2–4 sentences or a tight bullet list (3–5 items max). ' +
             'Use emojis throughout to keep the tone fun and visual. ' +
-            'Bold every friend name with **Name** markdown syntax so they stand out in the UI. ' +
+            'CRITICAL: Bold **every single mention** of a friend\'s name using **Name** markdown, every time their name appears — even if mentioned multiple times. Never write a friend\'s name without the ** bold markers. ' +
             'Use markdown formatting (bullet lists with "- ", bold with **text**) for readability.\n\n' +
             systemContext,
         },
@@ -218,6 +291,15 @@ export default function AiChat() {
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [poiMap, setPoiMap] = useState<Record<string, string>>({});
   const [poiReady, setPoiReady] = useState(false);
+
+  const nameToIdMap = useMemo<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    for (const f of friends) {
+      if (f.full_name) map[f.full_name] = f.id;
+      map[f.username] = f.id;
+    }
+    return map;
+  }, [friends]);
 
   const [activePrompt, setActivePrompt] = useState<Prompt | null>(null);
   const [responseText, setResponseText] = useState('');
@@ -259,7 +341,7 @@ export default function AiChat() {
         if (!ids.length) { setFriends([]); return; }
         const { data: users } = await supabase
           .from('users')
-          .select('full_name, username, status, last_online, bio, last_lat, last_lng')
+          .select('id, full_name, username, status, last_seen, is_online, bio, last_lat, last_lng')
           .in('id', ids);
         const loaded = users ?? [];
         setFriends(loaded);
@@ -358,6 +440,10 @@ export default function AiChat() {
                     textColor={C.text}
                     accentColor={C.accent}
                     fontSize={16}
+                    nameToIdMap={nameToIdMap}
+                    onNamePress={(userId) =>
+                      router.push({ pathname: '/profile/[id]', params: { id: String(userId) } })
+                    }
                   />
                 </>
               )}

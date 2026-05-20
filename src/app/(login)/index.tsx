@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Alert, Text, View, StyleSheet, Platform, TextInput, Image, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
+import React, { useState, Suspense } from 'react';
+import { Alert, Text, View, StyleSheet, Platform, TextInput, TouchableOpacity, ActivityIndicator, Modal, KeyboardAvoidingView, ScrollView } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase, supabaseAdmin } from '@/components/supabase';
 import { useAppTheme } from '@/contexts/theme-context';
 import { AsyncSkia } from '@/components/async-skia';
-import { Suspense } from 'react';
+import { Image } from 'expo-image';
 
 const EMPTY_FORM = { full_name: '', username: '', email: '', password: '', confirmPassword: '' };
 const Iridescence = React.lazy(() => import('@/components/iridescence'));
@@ -77,58 +77,60 @@ export default function Login() {
   }
 
   return (
-    <SafeAreaView 
-      style={{ 
-        flex: 1, 
-        backgroundColor: C.loginHeaderBg, 
-        paddingTop: Platform.OS === 'web' ? 80 : 0 
-      }} 
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: C.loginHeaderBg,
+        paddingTop: Platform.OS === 'web' ? 80 : 0
+      }}
       edges={['top']}
       >
 
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      >
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
         <Suspense fallback={<ActivityIndicator />}>
           <AsyncSkia />
-          <Iridescence />
+          <Iridescence color={[0.0, 0.7, 0.9]} />
         </Suspense>
       </View>
 
-      <View style={styles.screen}>
-          <Text 
-            style={styles.text}
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            minimumFontScale={0.5} >
-            Z O N O </Text>
-        <View style={styles.centerLoginBox}>
-          <View style={[styles.loginBox, { backgroundColor: C.loginBoxBg, shadowColor: C.loginBoxShadow }]}>
-            <Text style={[styles.loginText, { color: C.loginTitleText }]}
-              adjustsFontSizeToFit
-              numberOfLines={2}
-              minimumFontScale={0.6}
-            >
-              Welcome to ZONO, Log In!</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Logo with shape-fitted contrast outline */}
+          <View style={styles.logoWrapper}>
+
+            <Image
+              source={require('../../../assets/images/Zono Logo.svg')}
+              style={[styles.logo, StyleSheet.absoluteFillObject]}
+              contentFit="contain"
+              tintColor="#ffffff"
+            />
+          </View>
+
+          <View style={styles.loginBox}>
+            <Text style={styles.loginText} adjustsFontSizeToFit numberOfLines={2} minimumFontScale={0.6}>
+              Welcome, Log In!
+            </Text>
 
             <TextInput
-              style={[styles.input, { borderColor: C.loginInputBorder, backgroundColor: C.loginInputBg, color: C.text }]}
+              style={styles.input}
               placeholder="EMAIL"
-              placeholderTextColor="#c0c0c0"
+              placeholderTextColor="rgba(255,255,255,0.5)"
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
             />
             <TextInput
-              style={[styles.input, { borderColor: C.loginInputBorder, backgroundColor: C.loginInputBg, color: C.text }]}
+              style={styles.input}
               placeholder="PASSWORD"
-              placeholderTextColor="#c0c0c0"
+              placeholderTextColor="rgba(255,255,255,0.5)"
               secureTextEntry
               autoCapitalize="none"
               value={password}
@@ -138,33 +140,23 @@ export default function Login() {
             <TouchableOpacity
               onPress={handleLogin}
               disabled={loading}
-              style={{ backgroundColor: loading ? '#ccc' : '#007AFF', padding: 15, borderRadius: 8 }}
+              style={[styles.signInBtn, loading && { backgroundColor: 'rgba(255,255,255,0.3)' }]}
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text 
-                  style={{ color: '#fff', textAlign: 'center' }}
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                >
-                Sign In</Text>
+                : <Text style={styles.signInText} adjustsFontSizeToFit numberOfLines={1}>Sign In</Text>
               }
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => { setForm(EMPTY_FORM); setSignUpVisible(true); }}
-              style={{ marginTop: 12, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#007AFF' }}
+              style={styles.createBtn}
             >
-              <Text 
-                style={{ color: '#007AFF', textAlign: 'center', fontWeight: '600' }}
-                adjustsFontSizeToFit
-                numberOfLines={1}
-                >
-                  Create Account</Text>
+              <Text style={styles.createText} adjustsFontSizeToFit numberOfLines={1}>Create Account</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={signUpVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
@@ -238,25 +230,76 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  top: { flex: 0.08, justifyContent: "flex-start", alignItems: "center" },
-  text: { fontSize: 65, fontWeight: "bold", fontFamily: "monospace", color: "#949494", textAlign: "center", marginTop: 100, marginHorizontal: 20,},
-  centerLoginBox: { position: "absolute", top: 50, right: 0, bottom: 0, left: 0, justifyContent: "center", alignItems: "center" },
-  loginBox: {
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    width: 350,
-    height: 400,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+    gap: 32,
   },
-  loginText: { fontSize: 28, fontWeight: "bold", fontFamily: "monospace", textAlign: "center", width: "60%", marginBottom: 20 },
-  input: { fontFamily: "monospace", height: 45, width: 250, margin: 20, borderWidth: 2, paddingHorizontal: 10 },
-  googleButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, marginTop: 12, gap: 10 },
-  googleIcon: { width: 20, height: 20 },
-  googleText: { fontSize: 14, fontWeight: '600' },
+  logoWrapper: {
+    width: 280,
+    height: 75,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  logo: { width: 280, height: 75 },
+  loginBox: {
+    width: 340,
+    borderRadius: 28,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.38)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+  },
+  loginText: {
+    fontSize: 22,
+    fontWeight: '700',
+    fontFamily: 'monospace',
+    textAlign: 'center',
+    color: '#ffffff',
+    marginBottom: 20,
+    width: '85%',
+  },
+  input: {
+    fontFamily: 'monospace',
+    height: 46,
+    width: '100%',
+    marginVertical: 8,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    color: '#ffffff',
+  },
+  signInBtn: {
+    width: '100%',
+    backgroundColor: '#007AFF',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  signInText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  createBtn: {
+    width: '100%',
+    marginTop: 10,
+    padding: 13,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+  },
+  createText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '88%', borderRadius: 16, padding: 24, borderWidth: 1 },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 16 },

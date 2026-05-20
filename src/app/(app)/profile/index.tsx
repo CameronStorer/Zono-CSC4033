@@ -142,12 +142,9 @@ export default function OwnProfilePage() {
           <Text style={styles.name}>{profile?.full_name || 'Unknown User'}</Text>
           <Text style={styles.username}>@{profile?.username || 'username'}</Text>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Profile</Text>
-            <Text style={styles.cardText}>Status: {profile?.status || 'No status'}</Text>
-            <Text style={styles.cardText}>
-              Location sharing: {profile?.location_sharing || 'Unknown'}
-            </Text>
+          <View style={styles.presenceBadge}>
+            <View style={[styles.presenceDot, { backgroundColor: '#34C759' }]} />
+            <Text style={styles.presenceText}>Active now</Text>
           </View>
 
           <View style={styles.infoCard}>

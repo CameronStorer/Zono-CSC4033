@@ -128,10 +128,12 @@ export default function Map() {
 
     setVisitedSet(prev => new Set(prev).add(cellId));
 
+    let cancelled = false;
     supabase
       .from('visited_cells')
       .insert({ user_id: profile.id, cell_id: cellId })
       .then(({ error }) => {
+        if (cancelled) return;
         if (error) {
           console.warn('scratch-map: failed to mark cell visited', error);
           setVisitedSet(prev => {
@@ -141,6 +143,7 @@ export default function Map() {
           });
         }
       });
+    return () => { cancelled = true; };
   }, [userLocation, profile?.id, visitedLoaded]);
 
   const handleRegionChange = useCallback((r: Region) => setRegion(r), []);

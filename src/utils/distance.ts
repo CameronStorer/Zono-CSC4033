@@ -45,6 +45,23 @@ export function formatDistance (meters: number): string {
     return `${miles.toFixed(2)} mi`;
 }
 
+// Returns the 8-point compass direction from point A to point B.
+// Uses the bearing formula on a sphere (atan2 of cross-track components).
+export function compassBearing(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+): string {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLng = toRad(lng2 - lng1);
+  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  const bearing = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+  return dirs[Math.round(bearing / 45) % 8];
+}
+
 
 
 

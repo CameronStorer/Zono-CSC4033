@@ -97,6 +97,8 @@ export default function Map() {
   const [currentReaction, setCurrentReaction] = useState<EmojiReaction | null>(null);
   const [currentSender, setCurrentSender]     = useState<SenderInfo | null>(null);
 
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   // Prevents showing two overlays at the same time
   const isShowingReaction = useRef(false);
   const queuedReactionIds = useRef<Set<string>>(new Set());
@@ -110,29 +112,41 @@ export default function Map() {
     sizeMultiplier: number;
   } | null>(null);
 
-  // useMemo : only recompute distance text when selected friend change
-  const distanceText = useMemo( () => {
-    if (!selectedFriend) return '';
-    const meters = getDistanceMeters({ latitude: userLocation!.coords.latitude, longitude: userLocation!.coords.longitude }, selectedFriend);
+  const distanceText = useMemo(() => {
+    if (!selectedFriend || !userLocation) return '';
+    const meters = getDistanceMeters(
+      { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
+      selectedFriend,
+    );
     return formatDistance(meters);
-  }, [selectedFriend]); //recompute distance text when we have selected friend
+  }, [selectedFriend, userLocation]);
 
   // Current logged-in user profile
   const { profile } = useAuth();
   const currentUserId = profile?.id;
 
+  const userLocationRef = useRef(userLocation);
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+
   useEffect(() => {
   if (!currentUserId) return;
 
   async function updatePresence(isOnline: boolean) {
+    const loc = userLocationRef.current;
+    const update: Record<string, unknown> = {
+      is_online: isOnline,
+      last_seen: new Date().toISOString(),
+    };
+    if (!isOnline && loc) {
+      update.last_lat = loc.coords.latitude;
+      update.last_lng = loc.coords.longitude;
+    }
     await supabase
       .from('users')
-      .update({
-        is_online: isOnline,
-        last_seen: new Date().toISOString(),
-      })
+      .update(update)
       .eq('id', currentUserId);
-      
   }
 
   updatePresence(true);
@@ -142,12 +156,12 @@ export default function Map() {
   }, 30000);
 
   const subscription = AppState.addEventListener('change', (state) => {
-    
+
     if (state === 'active') {
       updatePresence(true);
     }
 
-    if (state == 'background') {
+    if (state === 'background') {
       updatePresence(false);
     }
   });
@@ -174,7 +188,7 @@ export default function Map() {
         userLocation.coords.longitude
       );
     }
-  }, [profile?.id]);
+  }, [profile?.id, userLocation]);
 
     useEffect(() => {
       if (currentUserId) {
@@ -215,7 +229,7 @@ export default function Map() {
             isOnline:
               Boolean(u.is_online) &&
               Boolean(u.last_seen) &&
-              Date.now() - new Date(u.last_seen).getTime() < 60000,
+              Date.now() - new Date(u.last_seen).getTime() < 90000,
 
             lastSeen: u.last_seen ?? null,
           };
@@ -233,11 +247,51 @@ export default function Map() {
   useEffect(() => {
     if (!currentUserId) return;
 
+    // Poll every 30s as a fallback
     const interval = setInterval(() => {
-    loadFriendsForMap(currentUserId);
-    }, 10000);
+      loadFriendsForMap(currentUserId);
+    }, 30000);
 
-    return () => clearInterval(interval);
+    // Tear down any existing channel before creating a new one to avoid
+    // "cannot add postgres_changes callbacks after subscribe()" when the
+    // effect re-runs before the previous cleanup fully completes.
+    if (presenceChannelRef.current) {
+      supabase.removeChannel(presenceChannelRef.current);
+      presenceChannelRef.current = null;
+    }
+
+    presenceChannelRef.current = supabase
+      .channel(`friend-presence-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users' },
+        (payload) => {
+          const updated = payload.new as { id: number; is_online: boolean; last_seen: string };
+          setMapFriends(prev =>
+            prev.map(f =>
+              f.id === String(updated.id)
+                ? {
+                    ...f,
+                    isOnline:
+                      Boolean(updated.is_online) &&
+                      Boolean(updated.last_seen) &&
+                      Date.now() - new Date(updated.last_seen).getTime() < 90000,
+                    lastSeen: updated.last_seen ?? f.lastSeen,
+                  }
+                : f
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      if (presenceChannelRef.current) {
+        supabase.removeChannel(presenceChannelRef.current);
+        presenceChannelRef.current = null;
+      }
+    };
   }, [currentUserId]);
 
   useEffect(() => {
@@ -952,7 +1006,7 @@ async function flushPendingSticker() {
             }
           }}
         >
-          <Text style={styles.circleButtonText}>◎</Text>
+          <Text style={styles.circleButtonText}>🎯</Text>
         </TouchableOpacity>
 
         {/* search modal */}
@@ -1107,24 +1161,41 @@ async function flushPendingSticker() {
             </Text>
             <Text style={{ color: '#ffffff' }}>Distance: {distanceText}</Text>
 
-            {/* ── Send Sticker button ── */}
-            <TouchableOpacity
-              onPress={() => setStickerSheetVisible(true)}
-              style={{
-                marginTop: 10,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                borderRadius: 12,
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                alignSelf: 'flex-start',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.35)',
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                🎯 Send Sticker
-              </Text>
-            </TouchableOpacity>
+            {/* ── Action buttons ── */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <TouchableOpacity
+                onPress={() => setStickerSheetVisible(true)}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 12,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.35)',
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                  🎯 Send Sticker
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({ pathname: '/profile/[id]', params: { id: selectedFriend.id } })
+                }
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 12,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.35)',
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                  👤 View Profile
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         {/* ── STICKER PICKER SHEET ──────────────────────── */}

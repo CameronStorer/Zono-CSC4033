@@ -47,6 +47,8 @@ type Props = {
   textColor: string;
   accentColor: string;
   fontSize?: number;
+  nameToIdMap?: Record<string, number>;
+  onNamePress?: (userId: number) => void;
 };
 
 export function MarkdownResponse({
@@ -55,6 +57,8 @@ export function MarkdownResponse({
   textColor,
   accentColor,
   fontSize = 16,
+  nameToIdMap,
+  onNamePress,
 }: Props) {
   const lh = fontSize * 1.6;
   const display = streaming ? text + ' ▇' : text;
@@ -62,15 +66,26 @@ export function MarkdownResponse({
 
   const Inline = ({ content }: { content: string }) => (
     <>
-      {parseInline(content).map((node, i) =>
-        node.t === 'bold' ? (
-          <Text key={i} style={{ color: accentColor, fontWeight: '700' }}>
-            {node.v}
-          </Text>
-        ) : (
-          <Text key={i}>{node.v}</Text>
-        )
-      )}
+      {parseInline(content).map((node, i) => {
+        if (node.t === 'bold') {
+          const userId = nameToIdMap?.[node.v];
+          const tappable = userId !== undefined && onNamePress != null;
+          return (
+            <Text
+              key={i}
+              style={{
+                color: accentColor,
+                fontWeight: '700',
+                textDecorationLine: tappable ? 'underline' : 'none',
+              }}
+              onPress={tappable ? () => onNamePress(userId) : undefined}
+            >
+              {node.v}
+            </Text>
+          );
+        }
+        return <Text key={i}>{node.v}</Text>;
+      })}
     </>
   );
 

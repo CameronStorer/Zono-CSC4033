@@ -14,15 +14,30 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {ActivityIndicator,Alert,Modal,ScrollView,Text,TextInput,TouchableOpacity,View,} from 'react-native';
 import { createReport } from '@/services/reportService';
+import { blockUser } from '@/services/blockService';
+import { supabase } from '@/components/supabase';
+
+function getPresenceLabel(isOnline: boolean | null, lastSeen: string | null): { label: string; color: string } {
+  const secs = lastSeen ? (Date.now() - new Date(lastSeen).getTime()) / 1000 : null;
+  if (isOnline && secs != null && secs < 90) return { label: 'Active now', color: '#34C759' };
+  if (secs == null) return { label: 'Offline', color: '#8E8E93' };
+  const mins = Math.round(secs / 60);
+  if (mins < 2) return { label: 'Just now', color: '#8E8E93' };
+  if (mins < 60) return { label: `${mins} min ago`, color: '#8E8E93' };
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return { label: `${hours}h ago`, color: '#8E8E93' };
+  const days = Math.round(hours / 24);
+  return { label: `${days}d ago`, color: '#8E8E93' };
+}
 
 function getInitials(name?: string | null, username?: string | null) {
   const value = name || username || '?';
-
   return value
     .split(' ')
+    .filter(part => part.length > 0)
     .map((part) => part[0])
     .join('')
     .toUpperCase()
@@ -132,6 +147,8 @@ export default function FriendProfilePage() {
   const [reportReason, setReportReason] = useState('');
   const [requestedIds, setRequestedIds] = useState<number[]>([]);
   const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null);
+  const [presenceOnline, setPresenceOnline] = useState<boolean | null>(null);
+  const [presenceLastSeen, setPresenceLastSeen] = useState<string | null>(null);
 
   async function loadProfilePage() {
     if (!id || !currentProfile?.id) {
@@ -153,6 +170,8 @@ export default function FriendProfilePage() {
       setProfile(targetProfile);
       setFriends(targetFriends);
       setRelationship(relation);
+      setPresenceOnline(targetProfile.is_online ?? null);
+      setPresenceLastSeen(targetProfile.last_seen ?? null);
     } catch (error) {
       console.log('FriendProfilePage load error:', error);
     } finally {
@@ -161,6 +180,25 @@ export default function FriendProfilePage() {
   }
 
   useEffect(() => {loadProfilePage();}, [id, currentProfile?.id]);
+
+  // Subscribe to real-time presence updates for this profile
+  useEffect(() => {
+    if (!id) return;
+    const targetId = Number(id);
+    const channel = supabase
+      .channel(`profile-presence-${targetId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${targetId}` },
+        (payload) => {
+          const u = payload.new as { is_online?: boolean; last_seen?: string };
+          if (u.is_online !== undefined) setPresenceOnline(u.is_online ?? null);
+          if (u.last_seen !== undefined) setPresenceLastSeen(u.last_seen ?? null);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
 
   async function handleProfileAction() {
     if (!currentProfile?.id || !profile?.id) {
@@ -235,13 +273,12 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
 
     try {
       setReportLoading(true);
-      await createReport(
-        Number(currentProfile.id),
-        Number(profile.id),
-        trimmed,
-      );
+      await Promise.all([
+        createReport(Number(currentProfile.id), Number(profile.id), trimmed),
+        blockUser(Number(currentProfile.id), Number(profile.id)),
+      ]);
       setShowReportModal(false);
-      Alert.alert('Report Submitted', 'We will review this report.');
+      Alert.alert('Report Submitted', 'We will review this report. This user has been blocked.');
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'Failed to submit report.');
     } finally {
@@ -355,28 +392,41 @@ async function handleUnsendFriendFromRow(targetUserId: number) {
             <Text style={styles.name}>{profile?.full_name || 'Unknown User'}</Text>
             <Text style={styles.username}>@{profile?.username || 'username'}</Text>
 
+            {(() => {
+              const { label, color } = getPresenceLabel(presenceOnline, presenceLastSeen);
+              return (
+                <View style={styles.presenceBadge}>
+                  <View style={[styles.presenceDot, { backgroundColor: color }]} />
+                  <Text style={styles.presenceText}>{label}</Text>
+                </View>
+              );
+            })()}
+
             {renderProfileActionButton()}
 
-            <TouchableOpacity
-              style={styles.reportButton}
-              activeOpacity={0.7}
-              disabled={reportLoading}
-              onPress={handleReportUser}
-            >
-              <Text style={styles.reportButtonText}>
-                {reportLoading ? 'Reporting...' : 'Report User'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.infoCard}>
-                <Text style={styles.cardTitle}>Profile</Text>
-                <Text style={styles.cardText}>
-                Status: {profile?.status || 'No status'}
-                </Text>
-                <Text style={styles.cardText}>
-                Location sharing: {profile?.location_sharing || 'Unknown'}
-                </Text>
-            </View>
+            {relationship !== 'self' && (
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.messageButton}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({ pathname: '/messages', params: { friendId: String(profile?.id) } })
+                  }
+                >
+                  <Text style={styles.messageButtonText}>💬 Message</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.reportButton}
+                  activeOpacity={0.7}
+                  disabled={reportLoading}
+                  onPress={handleReportUser}
+                >
+                  <Text style={styles.reportButtonText}>
+                    {reportLoading ? 'Reporting...' : '⚑ Report'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={styles.infoCard}>
                 <Text style={styles.cardTitle}>About</Text>
