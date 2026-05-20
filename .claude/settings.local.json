@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(sshpass *)",
-      "PowerShell(npm install *)"
-    ]
-  }
-}
