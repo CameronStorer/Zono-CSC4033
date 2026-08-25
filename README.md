@@ -9,7 +9,7 @@ Developed for the **Software Engineering (CSC 4033)** course at Louisiana Tech U
 ## The Team
 
 * **Ashton Harrell**
-* **Iris Nguyen**
+* **Khai Tran Nguyen (Iris)**
 * **Tia Ransom**
 * **Cameron Storer**
 
