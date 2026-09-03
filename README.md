@@ -14,6 +14,18 @@ Developed for the **Software Engineering (CSC 4033)** course at Louisiana Tech U
 * **Cameron Storer**
 
 ---
+## Pictures
+<img width="473" height="1024" alt="image0 jpg-3" src="https://github.com/user-attachments/assets/9da4e318-7ace-4fdc-8ebd-ed18c0777077" />
+<img width="473" height="1024" alt="image0 jpg-2" src="https://github.com/user-attachments/assets/62f1479f-55ec-420d-97b6-b7a12d27519b" />
+<img width="473" height="1024" alt="Screenshot_20260508_203309_Expo_Go jpg" src="https://github.com/user-attachments/assets/15d34249-2ebc-44e2-8416-94ca0543d9d2" />
+<img width="354" height="768" alt="IMG_1829 png" src="https://github.com/user-attachments/assets/4379d00c-0b91-4415-839e-52db463a31e8" />
+<img width="354" height="768" alt="IMG_1827 png" src="https://github.com/user-attachments/assets/ceb8e535-8f2d-4bdc-bd7e-9538a8c5420c" />
+<img width="354" height="768" alt="IMG_1632 png" src="https://github.com/user-attachments/assets/9ca8e62d-be7a-44db-942c-4a787815a6bb" />
+<img width="473" height="1024" alt="image0 jpg" src="https://github.com/user-attachments/assets/fb61e529-b942-42d5-8169-17d018cb28af" />
+<img width="312" height="645" alt="Screenshot 2026-09-03 at 6 43 06 PM" src="https://github.com/user-attachments/assets/354f6d21-7c1b-4edd-b585-f13830b722c4" />
+
+
+---
 
 ## Features
 
