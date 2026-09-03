@@ -1,4 +1,4 @@
-<img width="473" height="1024" alt="Screenshot_20260516_145531_Expo_Go jpg" src="https://github.com/user-attachments/assets/75fe0771-2984-4907-8d7b-aaa964db0ee1" />
+
 ![# Zono (CSC 4033)](https://raw.githubusercontent.com/CameronStorer/CSC4033/d13635e5a1d4984df3f7a67fd8e30be4adb08fe5/assets/images/Zono%20Logo.svg)
 
 An open-source, cross-platform mobile application designed to bring friends together through real-time location sharing, communication, and interactive activities.
@@ -24,7 +24,7 @@ Developed for the **Software Engineering (CSC 4033)** course at Louisiana Tech U
 <img width="354" height="768" alt="IMG_1632 png" src="https://github.com/user-attachments/assets/9ca8e62d-be7a-44db-942c-4a787815a6bb" />
 <img width="473" height="1024" alt="image0 jpg" src="https://github.com/user-attachments/assets/fb61e529-b942-42d5-8169-17d018cb28af" />
 <img width="312" height="645" alt="Screenshot 2026-09-03 at 6 43 06 PM" src="https://github.com/user-attachments/assets/354f6d21-7c1b-4edd-b585-f13830b722c4" />
-
+<img width="473" height="1024" alt="Screenshot_20260516_145531_Expo_Go jpg" src="https://github.com/user-attachments/assets/75fe0771-2984-4907-8d7b-aaa964db0ee1" />
 
 ---
 
