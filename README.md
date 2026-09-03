@@ -1,3 +1,4 @@
+<img width="473" height="1024" alt="Screenshot_20260516_145531_Expo_Go jpg" src="https://github.com/user-attachments/assets/75fe0771-2984-4907-8d7b-aaa964db0ee1" />
 ![# Zono (CSC 4033)](https://raw.githubusercontent.com/CameronStorer/CSC4033/d13635e5a1d4984df3f7a67fd8e30be4adb08fe5/assets/images/Zono%20Logo.svg)
 
 An open-source, cross-platform mobile application designed to bring friends together through real-time location sharing, communication, and interactive activities.
