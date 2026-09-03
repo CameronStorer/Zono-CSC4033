@@ -68,6 +68,10 @@ export default function Iridescence({
     };
   }, [clock, width, height]);
 
+  if (source == null) {
+    return null;
+  }
+
   return (
     <Canvas style={{ flex: 1 }}>
       <Fill>

@@ -108,7 +108,7 @@ export default function Login() {
 
             <Image
               source={require('../../../assets/images/Zono Logo.svg')}
-              style={[styles.logo, StyleSheet.absoluteFillObject]}
+              style={[styles.logo, StyleSheet.absoluteFill]}
               contentFit="contain"
               tintColor="#ffffff"
             />

@@ -181,7 +181,7 @@ export default function EmojiPickerSheet({visible,friend,onSend,onClose,
 const styles = StyleSheet.create({
   // Covers the full screen — sits on top of the map
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'transparent',
   },
 

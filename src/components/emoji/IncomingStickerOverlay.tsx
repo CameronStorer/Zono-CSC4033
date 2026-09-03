@@ -221,7 +221,7 @@ export default function IncomingStickerOverlay({
 const styles = StyleSheet.create({
   // Solid dark layer behind everything
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
 

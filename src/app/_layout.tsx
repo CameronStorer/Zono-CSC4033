@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { ThemeProvider, DarkTheme, DefaultTheme, Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider } from '@/components/auth-context';
 import { supabase } from '@/components/supabase';
 import { AppThemeProvider, useAppTheme } from '@/contexts/theme-context';
